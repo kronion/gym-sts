@@ -10,10 +10,8 @@ class GameState:
     def __init__(self):
         print("Starting STS")
         self.process = subprocess.Popen([JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
         atexit.register(lambda: self.process.kill())
 
-        print("Waiting 10 seconds for the game to start...")
         print("Opening pipe files...")
         self.sender = Sender(INPUT_FILE)
         self.receiver = Receiver(OUTPUT_FILE)

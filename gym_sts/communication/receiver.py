@@ -14,7 +14,5 @@ class Receiver:
             state = json.loads(self.fh.readline())
             if state["ready_for_command"]:
                 return state
-
-        print("Done")
         
         raise Exception("Waited 1000 messages for game state to be ready for command, but it didn't happen.")
