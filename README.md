@@ -9,6 +9,11 @@ TODO
 
 # Usage
 
+To build the Docker container:
+```
+docker build -t sts .
+```
+
 To run the Docker container:
 ```
 # On the host, make sure a loopback sound card has been created
