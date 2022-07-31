@@ -2,18 +2,37 @@ FROM ubuntu:20.04
 
 WORKDIR /game
 
-COPY lib lib
-
 RUN apt-get update &&  apt-get install -y \
     alsa-utils \
-    htop \
+    htop `: # useful diagnostic tool` \
     libopenal1 \
-    openjdk-8-jre \
+    openjdk-8-jre `: # java` \
+    python3 `: # python 3 (bare python is 2.7 in ubuntu)` \
     x11-xserver-utils \
-    xvfb
+    xvfb `: # virtual X screen`
+
+COPY lib lib
+COPY mods mods
 
 # Set default sound card to index 1, which is expected to be a
 # loopback sound card created by the host
 COPY asound.conf /etc/asound.conf
 
+# modthespire assumes you've installed the game through steam, so we have to trick it
+# into thinking nothing is amiss.
+# NB: WORKDIR statements create non-existent directories recursively
+WORKDIR /root/.steam/steam/steamapps
+RUN touch appmanifest_646570.acf  # modthespire expects this file to be present
+WORKDIR common/SlayTheSpire
+RUN ln -s /game/lib/desktop-1.0.jar
+WORKDIR jre/bin
+RUN ln -s /etc/alternatives/java  # modthespire uses the java JRE included with the game
+
+WORKDIR /root/.config/ModTheSpire/CommunicationMod
+COPY communication_mod.config.properties config.properties
+
+WORKDIR /game
+COPY main.py main.py
+
+# TODO entrypoint should boot game with mods
 ENTRYPOINT xvfb-run -s '-screen 0 1024x768x24' /bin/bash
