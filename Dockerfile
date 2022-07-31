@@ -32,7 +32,7 @@ WORKDIR /root/.config/ModTheSpire/CommunicationMod
 COPY communication_mod.config.properties config.properties
 
 WORKDIR /game
-COPY main.py main.py
+COPY gym_sts gym_sts
 
 # TODO entrypoint should boot game with mods
 ENTRYPOINT xvfb-run -s '-screen 0 1024x768x24' /bin/bash
