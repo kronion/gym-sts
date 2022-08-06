@@ -34,5 +34,5 @@ COPY communication_mod.config.properties config.properties
 WORKDIR /game
 COPY gym_sts gym_sts
 
-# TODO entrypoint should boot game with mods
-ENTRYPOINT xvfb-run -s '-screen 0 1024x768x24' /bin/bash
+ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout"]
+CMD ["java", "-jar", "lib/ModTheSpire.jar", "--mods", "basemod,CommunicationMod"]
