@@ -33,6 +33,7 @@ COPY communication_mod.config.properties config.properties
 
 WORKDIR /game
 COPY gym_sts gym_sts
+COPY test.sh test.sh
 
 ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout"]
-CMD ["java", "-jar", "lib/ModTheSpire.jar", "--mods", "basemod,CommunicationMod"]
+CMD ["python3", "gym_sts/runner.py"]
