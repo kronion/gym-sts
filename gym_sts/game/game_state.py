@@ -22,7 +22,7 @@ class BaseGameState:
         print("Starting a new game")
         self.sender.send_start("IRONCLAD", 0, seed)
         return self.receiver.receive_game_state()
-    
+
     def do_action(self, action):
         self.sender.send_message(action)
         return self.receiver.receive_game_state()
@@ -38,8 +38,8 @@ class LegacyGameState(BaseGameState):
         atexit.register(lambda: self.process.kill())
 
         print("Opening pipe files...")
-        self.sender = Sender(INPUT_FILE)
         self.receiver = Receiver(OUTPUT_FILE)
+        self.sender = Sender(INPUT_FILE)
 
         self.ready()
 
@@ -55,7 +55,7 @@ class DockerGameState(BaseGameState):
 
         init_fifos([self.input_file_path, self.output_file_path])
         self.logfile = self.logfile_path.open("w")
-        
+ 
         docker_args = ["docker", "run", "--rm", "-v", f"{self.output_dir}:/out", "--device", "/dev/snd", "--init", "sts"]
         mts_args = [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS
         self.process = subprocess.Popen(docker_args + mts_args,
@@ -63,7 +63,7 @@ class DockerGameState(BaseGameState):
             stdout=self.logfile,
             stderr=self.logfile)
         atexit.register(lambda: self.process.kill())
-        
+
         print("Opening pipe files...")
         self.sender = Sender(self.input_file_path)
         self.receiver = Receiver(self.output_file_path)

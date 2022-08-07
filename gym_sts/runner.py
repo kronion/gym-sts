@@ -6,7 +6,7 @@ import os
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no_docker", type=bool, action="store_true")
+    parser.add_argument("--no-docker", action="store_true")
     args = parser.parse_args()
 
     # Init game
