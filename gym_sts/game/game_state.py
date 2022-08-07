@@ -9,7 +9,8 @@ import subprocess
 class GameState:
     def __init__(self):
         print("Starting STS")
-        self.process = subprocess.Popen([JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(LOG_FILE, "w") as logfile:
+            self.process = subprocess.Popen([JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS, stdout=logfile, stderr=logfile)
         atexit.register(lambda: self.process.kill())
 
         print("Opening pipe files...")

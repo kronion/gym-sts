@@ -4,5 +4,8 @@ __pycache__/
 lib
 mods
 
+# Logs from docker container
+out/
+
 # Never check the game in, wherever it may be in the tree
 desktop-1.0.jar

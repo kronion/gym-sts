@@ -1,0 +1,14 @@
+{
+  "alias": "test",
+  "name": "test",
+  "IRONCLAD_SPIRITS": "1",
+  "THE_SILENT_SPIRITS": "1",
+  "DEFECT_SPIRITS": "1",
+  "DMG_DEALT": "12828",
+  "IRONCLAD_WIN": "true",
+  "THE_SILENT_WIN": "true",
+  "NOTE_CARD": "Zap",
+  "NOTE_UPGRADE": "0",
+  "DEFECT_WIN": "true",
+  "WATCHER_SPIRITS": "1"
+}

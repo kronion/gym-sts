@@ -9,10 +9,12 @@ RUN apt-get update &&  apt-get install -y \
     openjdk-8-jre `: # java` \
     python3 `: # python 3 (bare python is 2.7 in ubuntu)` \
     x11-xserver-utils \
-    xvfb `: # virtual X screen`
+    xvfb `: # virtual X screen` \
+    scrot
 
 COPY lib lib
 COPY mods mods
+COPY preferences preferences
 
 # Set default sound card to index 1, which is expected to be a
 # loopback sound card created by the host
