@@ -1,12 +1,20 @@
-from communication import init_fifos
-from game.game_state import GameState
+from game.game_state import LegacyGameState, DockerGameState
 from settings import *
 
+import argparse
+import os
+
 def main():
-    init_fifos([INPUT_FILE, OUTPUT_FILE])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--no_docker", type=bool, action="store_true")
+    args = parser.parse_args()
 
     # Init game
-    game_state = GameState()
+
+    if args.no_docker:
+        game_state = LegacyGameState()
+    else:
+        game_state = DockerGameState(f"{os.getcwd()}/out")
 
     observation = game_state.begin(42)
 

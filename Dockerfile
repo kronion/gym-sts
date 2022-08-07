@@ -38,4 +38,4 @@ COPY gym_sts gym_sts
 COPY test.sh test.sh
 
 ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout"]
-CMD ["python3", "gym_sts/runner.py"]
+CMD ["python3", "gym_sts/runner.py", "--no_docker"]
