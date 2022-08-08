@@ -10,7 +10,7 @@ RUN apt-get update &&  apt-get install -y \
     python3 `: # python 3 (bare python is 2.7 in ubuntu)` \
     x11-xserver-utils \
     xvfb `: # virtual X screen` \
-    scrot
+    scrot `: # utility to take screenshots`
 
 COPY lib lib
 COPY mods mods
