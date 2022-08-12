@@ -3,6 +3,7 @@ from settings import *
 
 import argparse
 import os
+import time
 
 def main():
     parser = argparse.ArgumentParser()
@@ -17,6 +18,8 @@ def main():
         game_state = DockerGameState(f"{os.getcwd()}/out")
 
     observation = game_state.begin(42)
+    time.sleep(2)
+    game_state.reset()
 
     while True:
         action = input()

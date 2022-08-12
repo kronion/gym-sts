@@ -18,6 +18,10 @@ class Sender:
     def send_choose(self, choice):
         self.send_message(f"CHOOSE {choice}")
 
+    def send_click(self, x: int, y: int, left: bool = True):
+        side = "left" if left else "right"
+        self.send_message(f"CLICK {side} {x} {y}")
+
     def send_play(self, index, target):
         # NOTE: Card index argument is indexed from 1, with 0 representing position 10.
         # Indices can change in the middle of a game.
@@ -29,3 +33,6 @@ class Sender:
 
     def send_potion(self, action, slot, target):
         self.send_message(f"POTION {action} {slot} {target}")
+
+    def send_wait(self, frames: int):
+        self.send_message(f"WAIT {frames}")

@@ -27,6 +27,25 @@ class BaseGameState:
         self.sender.send_message(action)
         return self.receiver.receive_game_state()
 
+    def reset(self):
+        self.sender.send_click(1900, 10)
+        self.receiver.receive_game_state()
+        self.sender.send_click(1500, 240)
+        self.sender.send_click(1500, 240)
+        self.receiver.receive_game_state()
+        self.sender.send_click(830, 700)
+        self.sender.send_click(830, 700)
+        self.receiver.receive_game_state()
+        self.sender.send_click(950, 920)
+        self.sender.send_click(950, 920)
+        self.receiver.receive_game_state()
+        self.sender.send_click(950, 950)
+        self.sender.send_click(950, 950)
+        while True:
+            state = self.receiver.receive_game_state()
+            if not state["in_game"]:
+                self.sender.send_start("IRONCLAD", 0, 42)
+                break
 
 class LegacyGameState(BaseGameState):
     def __init__(self):
