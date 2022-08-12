@@ -9,3 +9,10 @@ out/
 
 # Never check the game in, wherever it may be in the tree
 desktop-1.0.jar
+
+# Files created upon running the game
+info.displayconfig
+runs
+saves
+sendToDevs
+twitchconfig.txt
