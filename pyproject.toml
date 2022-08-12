@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "gym-sts"
+version = "0.1.0"
+description = "Gym environment for Slay the Spire"
+authors = ["Zeus Kronion <kronion@users.noreply.github.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+docker = "^5.0.3"
+gym = "^0.25.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
