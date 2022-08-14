@@ -4,15 +4,16 @@ import random
 import subprocess
 from typing import Optional
 
+import docker
+from docker.models.containers import Container
 import gym
 
 from gym_sts.communication import Communicator
 from gym_sts.envs.observations import Observation
 from gym_sts.settings import *
 
-
 class SlayTheSpireGymEnv(gym.Env):
-    def __init__(self, output_dir: str):
+    def __init__(self, output_dir: str, headless: bool = False):
         print("Starting STS in Docker container")
         self.output_dir = pathlib.Path(output_dir)
         self.logfile_path = self.output_dir / "stderr.log"
@@ -21,17 +22,32 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.logfile = self.logfile_path.open("w")
 
-        # docker_args = ["docker", "run", "--rm", "-v", f"{self.output_dir}:/out", "--device", "/dev/snd", "--init", "sts"]
-        # mts_args = [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS
-        # self.process = subprocess.Popen(docker_args + mts_args,
-        #     stdin=subprocess.DEVNULL,
-        #     stdout=self.logfile,
-        #     stderr=self.logfile)
-        self.process = subprocess.Popen([JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS, stdout=self.logfile, stderr=self.logfile)
-        atexit.register(lambda: self.process.kill())
+        if headless:
+            self.client = docker.from_env()
+            mts_args = [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS
+            self.container: Container = self.client.containers.run(
+                image='sts',
+                command=mts_args,
+                remove=True,
+                devices=['/dev/snd'],
+                init=True,
+                detach=True,
+                volumes={
+                    self.output_dir.resolve(): dict(bind="/out", mode="rw")
+                },
+            )
+            print(f'started docker container {self.container.name}')
+            print(f'To view logs, run `docker logs {self.container.name}`.')
+            atexit.register(self.container.stop)
+        else:
+            self.process = subprocess.Popen(
+                [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS,
+                stdout=self.logfile, stderr=self.logfile)
+            atexit.register(lambda: self.process.kill())
 
         print("Opening pipe files...")
         self.communicator = Communicator(self.input_path, self.output_path)
+        print("Opened pipe files.")
 
         self.ready()
 
@@ -46,6 +62,7 @@ class SlayTheSpireGymEnv(gym.Env):
             return
 
         # If still alive
+        # TODO(collin): document/clean this up
         if not obs.game_over:
             self.communicator.click(1900, 10)
             self.communicator.click(1500, 240)
