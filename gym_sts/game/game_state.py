@@ -24,7 +24,7 @@ class BaseGameState:
         return self.receiver.receive_game_state()
 
     def do_action(self, action):
-        self.sender.send_message(action)
+        self.sender._send_message(action)
         return self.receiver.receive_game_state()
 
     def reset(self):

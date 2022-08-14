@@ -7,7 +7,17 @@ All installation commands are expected to be run as root.
 
 # Installation
 
+1. Install the package along with its dependencies:
+```
+pip install -e .
+
+# Alternatively, you can use poetry
+poetry install
+```
+
 TODO
+
+- Mods, game expected at particular locations
 
 # Build
 

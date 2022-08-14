@@ -6,11 +6,12 @@ authors = ["Zeus Kronion <kronion@users.noreply.github.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.9"
 docker = "^5.0.3"
 gym = "^0.25.1"
 
 [tool.poetry.dev-dependencies]
+ipython = "^8.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

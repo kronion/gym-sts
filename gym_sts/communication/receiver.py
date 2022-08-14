@@ -1,5 +1,6 @@
 import json
 
+
 class Receiver:
     def __init__(self, fn):
         self.fh = open(fn, "r")
