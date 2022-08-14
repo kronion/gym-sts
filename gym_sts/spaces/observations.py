@@ -5,7 +5,7 @@ def generate_card_space():
     # Generally beyond some number of cards you don't actually care
     # how many cards you have
     # But this could be optimized
-    return MultiDiscrete([8] * NUM_CARDS)
+    return MultiDiscrete([5] * NUM_CARDS * 2)
 
 def generate_effect_space():
     return Tuple(
