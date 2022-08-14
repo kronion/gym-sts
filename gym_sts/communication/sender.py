@@ -9,7 +9,7 @@ class Sender:
     def send_ready(self) -> None:
         self._send_message("READY")
 
-    def send_start(self, player_class, ascension, seed) -> None:
+    def send_start(self, player_class: str, ascension: int, seed: int) -> None:
         self._send_message(f"START {player_class} {ascension} {seed}")
 
     def send_proceed(self) -> None:
@@ -29,7 +29,7 @@ class Sender:
         self._send_message(f"PLAY {index} {target}")
 
     def send_end(self) -> None:
-        self.send_meesage("END")
+        self._send_message("END")
 
     def send_potion(self, action, slot, target) -> None:
         self._send_message(f"POTION {action} {slot} {target}")
