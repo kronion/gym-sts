@@ -26,37 +26,37 @@ class Communicator:
         self.sender.send_ready()
 
     def choose(self, choice) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.choose(choice)
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def click(self, x: int, y: int, left: bool = True) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_click(x,y, left=left)
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def end(self) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_end()
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def potion(self, action, slot, target) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_potion(action, slot, target)
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def proceed(self) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_proceed()
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def start(self, player_class: str, ascension: int, seed: int) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_start(player_class, ascension, seed)
         state = self.receiver.receive_game_state()
         return Observation(state)
@@ -67,13 +67,13 @@ class Communicator:
         not the game is "stable." This method is valid in all game states.
         """
 
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_state()
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def wait(self, frames: int) -> Observation:
-        # self.receiver.empty_fifo()
+        self.receiver.empty_fifo()
         self.sender.send_wait(frames)
         state = self.receiver.receive_game_state()
         return Observation(state)

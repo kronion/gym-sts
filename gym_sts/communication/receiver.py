@@ -20,7 +20,7 @@ class Receiver:
         corresponds to the result of the next action sent to the game.
         """
 
-        self.fh.read()
+        self.fh.readlines()
 
     def receive_game_state(self) -> dict:
         """
