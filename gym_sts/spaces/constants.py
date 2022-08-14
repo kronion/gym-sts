@@ -13,7 +13,8 @@ ALL_POTIONS = ["EntropicBrew", "Regen Potion", "AttackPotion", "SkillPotion", "L
 ALL_INTENTS = [ "ATTACK", "ATTACK_BUFF", "ATTACK_DEBUFF", "ATTACK_DEFEND", "BUFF", "DEBUFF", "STRONG_DEBUFF", "DEBUG", "DEFEND", "DEFEND_DEBUFF", "DEFEND_BUFF", "ESCAPE", "MAGIC", "NONE", "SLEEP", "STUN", "UNKNOWN"]
 ALL_EVENTS = [ "Shining Light", "World of Goop", "Mushrooms", "The Cleric", "Dead Adventurer", "Living Wall", "Big Fish", "Liars Game", "Scrap Ooze", "Golden Wing", "Golden Idol", "Beggar", "Colosseum", "The Mausoleum", "The Library", "Addict", "Cursed Tome", "The Joust", "Forgotten Altar", "Masked Bandits", "Drug Dealer", "Knowing Skull", "Back to Basics", "Vampires", "Nest", "Ghosts", "Mysterious Sphere", "Tomb of Lord Red Mask", "SecretPortal", "The Moai Head", "Spire Heart", "SensoryStone", "MindBloom", "Falling", "Winding Halls", "Golden Shrine", "Accursed Blacksmith", "Designer", "Fountain of Cleansing", "Wheel of Change", "Duplicator", "The Woman in Blue", "Match and Keep!", "NoteForYourself", "WeMeetAgain", "Transmorgrifier", "N'loth", "Bonfire Elementals", "Purifier", "Upgrade Shrine", "Lab", "FaceTrader"]
 
-# TODO: All intents
+# I don't know if 15 is enough, I know the card flipping game has at least 12
+NUM_CHOICES = 15
 
 # STS Wiki says 42 potions in total, not sure if it's complete
 NUM_POTIONS = len(ALL_POTIONS)
