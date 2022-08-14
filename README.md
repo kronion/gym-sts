@@ -15,7 +15,18 @@ pip install -e .
 poetry install
 ```
 
-TODO
+2. Pull in required jar files. Directory structure should look like this:
+```
+gym-sts/
+  gym_sts/
+    ...
+  lib/
+    desktop-1.0.jar
+    ModTheSpire.jar
+  mods/
+    BaseMod.jar
+    CommunicationMod.jar
+```
 
 - Mods, game expected at particular locations
 
