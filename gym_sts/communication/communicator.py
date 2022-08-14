@@ -3,7 +3,7 @@ from pathlib import Path
 
 from gym_sts.communication.receiver import Receiver
 from gym_sts.communication.sender import Sender
-from gym_sts.envs.observations import Observation
+from gym_sts.spaces.observations import Observation
 
 
 def init_fifos(filenames):

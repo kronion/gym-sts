@@ -9,7 +9,7 @@ from docker.models.containers import Container
 import gym
 
 from gym_sts.communication import Communicator
-from gym_sts.envs.observations import Observation
+from gym_sts.spaces.observations import Observation
 from gym_sts.settings import *
 
 class SlayTheSpireGymEnv(gym.Env):
