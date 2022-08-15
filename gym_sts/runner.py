@@ -1,39 +1,34 @@
-from game.game_state import LegacyGameState, DockerGameState
-from settings import *
-
 import argparse
-import os
-import time
+
+from gym_sts.envs.base import SlayTheSpireGymEnv
+from gym_sts.spaces.observations import ObservationError
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--no-docker", action="store_true")
+    parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
 
     # Init game
 
-    if args.no_docker:
-        game_state = LegacyGameState()
-    else:
-        game_state = DockerGameState(f"{os.getcwd()}/out")
-
-    observation = game_state.begin(42)
-    time.sleep(2)
-    game_state.reset()
+    env = SlayTheSpireGymEnv("out", headless=args.headless)
+    env.reset()
 
     while True:
         action = input()
         if not action:
             print("No action given. Defaulting to STATE.")
             action = "STATE"
-        observation = game_state.do_action(action)
-        print(observation)
-        if "error" in observation:
-            print("ERROR")
-            print(observation["error"])
-        else:
+        observation = env._do_action(action)
+        print(observation.state)
+        try:
+            commands = observation._available_commands
             print("AVAILABLE COMMANDS:")
-            print(observation["available_commands"])
+            print(commands)
+        except ObservationError as e:
+            print("ERROR")
+            print(e)
+
 
 if __name__ == "__main__":
     main()

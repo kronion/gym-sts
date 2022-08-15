@@ -1,3 +1,5 @@
+from typing import Optional
+
 from gym_sts.spaces.constants import *
 from gym.spaces import Discrete, MultiBinary, MultiDiscrete, Dict, Tuple
 
@@ -61,18 +63,46 @@ OBSERVATION_SPACE = Dict({
 })
 
 
+class ObservationError(Exception):
+    pass
+
+
 class Observation:
     def __init__(self, state: dict):
-        self.in_game = state["in_game"]
-        self.stable = state["ready_for_command"]
+        # Keep a reference to the raw CommunicationMod response
+        self.state = state
 
-        if "game_state" in state:
-            game_state = state["game_state"]
-            self.screen_type = game_state["screen_type"]
+    def check_for_error(self) -> None:
+        if "error" in self.state:
+            raise ObservationError(self.state["error"])
+
+    @property
+    def _available_commands(self) -> list[str]:
+        self.check_for_error()
+        return self.state["available_commands"]
+
+    @property
+    def game_over(self) -> bool:
+        self.check_for_error()
+        return self.screen_type == "GAME_OVER"
+
+    @property
+    def in_game(self) -> bool:
+        self.check_for_error()
+        return self.state["in_game"]
+
+    @property
+    def screen_type(self) -> str:
+        self.check_for_error()
+        if "game_state" in self.state:
+            game_state = self.state["game_state"]
+            screen_type = game_state["screen_type"]
         else:
             # CommunicationMod doesn't specify a screen type in the main menu
-            self.screen_type = "MAIN_MENU"
-        self.game_over = self.screen_type == "GAME_OVER"
+            screen_type = "MAIN_MENU"
 
-        # Keep a reference to the raw CommunicationMod response
-        self._state = state
+        return screen_type
+
+    @property
+    def stable(self) -> bool:
+        return self.state["ready_for_command"]

@@ -22,6 +22,12 @@ class Communicator:
         self.receiver = Receiver(self.output_path)
         self.sender = Sender(self.input_path)
 
+    def _manual_command(self, action: str) -> Observation:
+        self.receiver.empty_fifo()
+        self.sender._send_message(action)
+        state = self.receiver.receive_game_state()
+        return Observation(state)
+
     def ready(self) -> None:
         self.sender.send_ready()
 

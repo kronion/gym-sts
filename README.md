@@ -28,8 +28,6 @@ gym-sts/
     CommunicationMod.jar
 ```
 
-- Mods, game expected at particular locations
-
 # Build
 
 To build the Docker container:
@@ -51,7 +49,7 @@ modprobe snd-aloop  # TODO can an index be assigned?
 This lets the Python script start the container.
 
 ```
-python3 gym_sts/runner.py
+python3 -m gym_sts.runner
 ```
 
 ## Python script inside container

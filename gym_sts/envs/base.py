@@ -55,6 +55,16 @@ class SlayTheSpireGymEnv(gym.Env):
         self.seed = None
         self.prng = None
 
+    def _do_action(self, action: str) -> Observation:
+        """
+        Manually execute CommunicationMod commands.
+
+        This method can be useful for debugging in development, but it should not be
+        used by agents. Please use step() instead.
+        """
+
+        return self.communicator._manual_command(action)
+
     def _end_game(self) -> None:
         obs = self.observe()
 
