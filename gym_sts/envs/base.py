@@ -1,6 +1,8 @@
 import atexit
+import os
 import pathlib
 import random
+import shutil
 import subprocess
 from typing import Optional
 
@@ -37,32 +39,22 @@ class SlayTheSpireGymEnv(gym.Env):
         self.logfile = self.logfile_path.open("w")
 
         if headless:
-            print("Starting STS in Docker container")
-            self.client = docker.from_env()
-            try:
-                self.client.images.get("sts")
-            except docker.errors.ImageNotFound:
-                raise Exception("sts image not found. Please build it with SlayTheSpireGymEnv.build_image()")
-
-            self.container: Container = self.client.containers.run(
-                image='sts',
-                remove=True,
-                devices=['/dev/snd'],
-                init=True,
-                detach=True,
-                volumes={
-                    self.output_dir.resolve(): dict(bind="/out", mode="rw"),
-                    self.lib_dir: dict(bind="/game/lib", mode="ro"),
-                    self.mods_dir: dict(bind="/game/mods", mode="ro"),
-                },
-            )
-            print(f'started docker container {self.container.name}')
-            print(f'To view logs, run `docker logs {self.container.name}`.')
-            atexit.register(self.container.stop)
+            self._run_container()
         else:
+            print("Starting STS on the host machine")
+            try:
+                shutil.copytree(str(lib_dir), "tmp/lib")
+            except FileExistsError:
+                pass
+            try:
+                shutil.copytree(str(mods_dir), "tmp/mods")
+            except FileExistsError:
+                pass
+
             # TODO Create a sandbox directory where the subprocess will run
+            # os.chdir("tmp")
             self.process = subprocess.Popen(
-                [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS,
+                [JAVA_INSTALL, "-jar" , "lib/ModTheSpire.jar"] + EXTRA_ARGS,
                 stdout=self.logfile, stderr=self.logfile)
             atexit.register(lambda: self.process.kill())
 
@@ -80,6 +72,30 @@ class SlayTheSpireGymEnv(gym.Env):
     def build_image(cls):
         client = docker.from_env()
         client.images.build(path=str(PROJECT_ROOT / "build"), tag="sts")
+
+    def _run_container(self):
+        print("Starting STS in Docker container")
+        self.client = docker.from_env()
+        try:
+            self.client.images.get("sts")
+        except docker.errors.ImageNotFound:
+            raise Exception("sts image not found. Please build it with SlayTheSpireGymEnv.build_image()")
+
+        self.container: Container = self.client.containers.run(
+            image='sts',
+            remove=True,
+            devices=['/dev/snd'],
+            init=True,
+            detach=True,
+            volumes={
+                self.output_dir.resolve(): dict(bind="/out", mode="rw"),
+                self.lib_dir: dict(bind="/game/lib", mode="ro"),
+                self.mods_dir: dict(bind="/game/mods", mode="ro"),
+            },
+        )
+        print(f'started docker container {self.container.name}')
+        print(f'To view logs, run `docker logs {self.container.name}`.')
+        atexit.register(self.container.stop)
 
     def _do_action(self, action: str) -> Observation:
         """
