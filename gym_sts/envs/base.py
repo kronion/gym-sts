@@ -10,7 +10,7 @@ import gym
 
 from gym_sts.communication import Communicator
 from gym_sts.spaces.observations import Observation
-from gym_sts.settings import *
+from gym_sts.constants import *
 
 class SlayTheSpireGymEnv(gym.Env):
     def __init__(self, output_dir: str, headless: bool = False):
@@ -24,6 +24,10 @@ class SlayTheSpireGymEnv(gym.Env):
 
         if headless:
             self.client = docker.from_env()
+            try:
+                self.client.images.get("sts2")
+            except docker.errors.ImageNotFound:
+                raise Exception("sts image not found. Please build it with SlayTheSpireGymEnv.build_image()")
             mts_args = [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS
             self.container: Container = self.client.containers.run(
                 image='sts',
@@ -54,6 +58,11 @@ class SlayTheSpireGymEnv(gym.Env):
         # Set on first reset
         self.seed = None
         self.prng = None
+
+    @classmethod
+    def build_image(cls):
+        client = docker.from_env()
+        client.images.build(path=str(PROJECT_ROOT), dockerfile=str(PROJECT_ROOT / "build" / "Dockerfile"))
 
     def _do_action(self, action: str) -> Observation:
         """

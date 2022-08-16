@@ -9,8 +9,6 @@ def main():
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
 
-    # Init game
-
     env = SlayTheSpireGymEnv("out", headless=args.headless)
     env.reset()
 
