@@ -5,45 +5,62 @@ import subprocess
 from typing import Optional
 
 import docker
-from docker.models.containers import Container
 import gym
+from docker.models.containers import Container
 
 from gym_sts.communication import Communicator
 from gym_sts.spaces.observations import Observation
 from gym_sts.constants import *
 
+
 class SlayTheSpireGymEnv(gym.Env):
-    def __init__(self, output_dir: str, headless: bool = False):
-        print("Starting STS in Docker container")
-        self.output_dir = pathlib.Path(output_dir)
-        self.logfile_path = self.output_dir / "stderr.log"
+    def __init__(self, lib_dir: str, mods_dir: str, output_dir: str, headless: bool = False):
+        """
+        Gym env to interact with the Slay the Spire video game.
+
+        Args:
+            lib_dir: The directory containing desktop-1.0.jar and ModTheSpire.jar.
+            mods_dir: The directory containing BaseMod.jar and CommunicationMod.jar.
+            output_dir: Directory used for intercommunication between env and containers.
+            headless: If True, run the game in a headless Docker container. Otherwise,
+                run the game directly on the host (presumably with a visible interface).
+        """
+
+        self.lib_dir = pathlib.Path(lib_dir).resolve()
+        self.mods_dir = pathlib.Path(mods_dir).resolve()
+
+        self.output_dir = pathlib.Path(output_dir).resolve()
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
+        self.logfile_path = self.output_dir / "stderr.log"
 
         self.logfile = self.logfile_path.open("w")
 
         if headless:
+            print("Starting STS in Docker container")
             self.client = docker.from_env()
             try:
-                self.client.images.get("sts2")
+                self.client.images.get("sts")
             except docker.errors.ImageNotFound:
                 raise Exception("sts image not found. Please build it with SlayTheSpireGymEnv.build_image()")
-            mts_args = [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS
+
             self.container: Container = self.client.containers.run(
                 image='sts',
-                command=mts_args,
                 remove=True,
                 devices=['/dev/snd'],
                 init=True,
                 detach=True,
                 volumes={
-                    self.output_dir.resolve(): dict(bind="/out", mode="rw")
+                    self.output_dir.resolve(): dict(bind="/out", mode="rw"),
+                    self.lib_dir: dict(bind="/game/lib", mode="ro"),
+                    self.mods_dir: dict(bind="/game/mods", mode="ro"),
                 },
             )
             print(f'started docker container {self.container.name}')
             print(f'To view logs, run `docker logs {self.container.name}`.')
             atexit.register(self.container.stop)
         else:
+            # TODO Create a sandbox directory where the subprocess will run
             self.process = subprocess.Popen(
                 [JAVA_INSTALL, "-jar" , MTS_PATH] + EXTRA_ARGS,
                 stdout=self.logfile, stderr=self.logfile)
@@ -62,7 +79,7 @@ class SlayTheSpireGymEnv(gym.Env):
     @classmethod
     def build_image(cls):
         client = docker.from_env()
-        client.images.build(path=str(PROJECT_ROOT), dockerfile=str(PROJECT_ROOT / "build" / "Dockerfile"))
+        client.images.build(path=str(PROJECT_ROOT / "build"), tag="sts")
 
     def _do_action(self, action: str) -> Observation:
         """
