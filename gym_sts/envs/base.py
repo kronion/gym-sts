@@ -41,22 +41,7 @@ class SlayTheSpireGymEnv(gym.Env):
         if headless:
             self._run_container()
         else:
-            print("Starting STS on the host machine")
-            try:
-                shutil.copytree(str(lib_dir), "tmp/lib")
-            except FileExistsError:
-                pass
-            try:
-                shutil.copytree(str(mods_dir), "tmp/mods")
-            except FileExistsError:
-                pass
-
-            # TODO Create a sandbox directory where the subprocess will run
-            # os.chdir("tmp")
-            self.process = subprocess.Popen(
-                [JAVA_INSTALL, "-jar" , "lib/ModTheSpire.jar"] + EXTRA_ARGS,
-                stdout=self.logfile, stderr=self.logfile)
-            atexit.register(lambda: self.process.kill())
+            self._run_locally()
 
         print("Opening pipe files...")
         self.communicator = Communicator(self.input_path, self.output_path)
@@ -69,11 +54,26 @@ class SlayTheSpireGymEnv(gym.Env):
         self.prng = None
 
     @classmethod
-    def build_image(cls):
+    def build_image(cls) -> None:
         client = docker.from_env()
         client.images.build(path=str(PROJECT_ROOT / "build"), tag="sts")
 
-    def _run_container(self):
+    def _generate_communication_mod_config(self) -> None:
+        """
+        Create the config file CommunicationMod uses to start a subprocess.
+
+        WARNING: This function will silently overwrite any existing config file.
+        """
+
+        pipe_script = (PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
+        command = f"{pipe_script} {self.input_path} {self.output_path}"
+        config_file = Path("~/.config/ModTheSpire/CommunicationMod/config.properties").expanduser()
+
+        with config_file.open(mode="w") as f:
+            f.write(f"command={command}\n")
+            f.write("runAtGameStart=true\n")
+
+    def _run_container(self) -> None:
         print("Starting STS in Docker container")
         self.client = docker.from_env()
         try:
@@ -88,7 +88,7 @@ class SlayTheSpireGymEnv(gym.Env):
             init=True,
             detach=True,
             volumes={
-                self.output_dir.resolve(): dict(bind="/out", mode="rw"),
+                self.output_dir.resolve(): dict(bind="/game/out", mode="rw"),
                 self.lib_dir: dict(bind="/game/lib", mode="ro"),
                 self.mods_dir: dict(bind="/game/mods", mode="ro"),
             },
@@ -96,6 +96,30 @@ class SlayTheSpireGymEnv(gym.Env):
         print(f'started docker container {self.container.name}')
         print(f'To view logs, run `docker logs {self.container.name}`.')
         atexit.register(self.container.stop)
+
+    def _run_locally(self) -> None:
+        print("Starting STS on the host machine")
+
+        # Create a sandbox directory where the subprocess will run
+        try:
+            shutil.copytree(str(lib_dir), "tmp")
+        except FileExistsError:
+            pass
+        try:
+            shutil.copytree(str(mods_dir), "tmp/mods")
+        except FileExistsError:
+            pass
+        preferences = PROJECT_ROOT / "build" / "preferences"
+        shutil.copytree(str(preferences), "tmp/preferences", dirs_exist_ok=True)
+
+        self._generate_communication_mod_config()
+
+        os.chdir("tmp")
+
+        self.process = subprocess.Popen(
+            [JAVA_INSTALL, "-jar" , "ModTheSpire.jar"] + EXTRA_ARGS,
+            stdout=self.logfile, stderr=self.logfile)
+        atexit.register(lambda: self.process.kill())
 
     def _do_action(self, action: str) -> Observation:
         """

@@ -32,7 +32,7 @@ WORKDIR /root/.config/ModTheSpire/CommunicationMod
 COPY communication_mod.config.properties config.properties
 
 WORKDIR /game
-COPY test.sh test.sh
+COPY pipe_to_host.sh pipe_to_host.sh
 
 ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout"]
 CMD ["java", "-jar", "/game/lib/ModTheSpire.jar", "--skip-intro", "--mods", "basemod,CommunicationMod"]

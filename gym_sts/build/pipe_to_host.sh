@@ -1,6 +1,6 @@
 #!/bin/bash
-INPUT="/out/stsai_input"
-OUTPUT="/out/stsai_output"
+INPUT="out/stsai_input"
+OUTPUT="out/stsai_output"
 
 function cleanup() {
     kill $BG_PID
