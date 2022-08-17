@@ -32,7 +32,8 @@ gym-sts/
 
 To build the Docker container:
 ```
-docker build -t sts .
+from gym_sts.envs.base import SlayTheSpireGymEnv
+SlayTheSpireGymEnv.build_image()
 ```
 
 # Setup
@@ -44,21 +45,22 @@ modprobe snd-aloop  # TODO can an index be assigned?
 
 # Run
 
-## Python script outside container (preferred)
+## Run the game headless in a Docker container (preferred)
 
-This lets the Python script start the container.
-
-```
-python3 -m gym_sts.runner
-```
-
-## Python script inside container
-
-This lets the container start the Python script.
+The Python script will start the container. You can communicate with the game using
+CommunicationMod commands via stdin.
 
 ```
-# Use the convenience script to boot the container.
-# By default, the game will start with the required mods, but you
-# can also specify your own command to run, e.g. /bin/bash
-./run_container.sh [optional-command]
+python3 -m gym_sts.runner [lib_dir] [mod_dir] [out_dir] --headless
+```
+
+## Run the game directly on the host
+
+The Python script will start the game as a subprocess. This allows for easy observation
+of gameplay. You can communicate with the game using CommunicationMod commands via
+stdin.
+
+
+```
+python3 -m gym_sts.runner [lib_dir] [mod_dir] [out_dir]
 ```
