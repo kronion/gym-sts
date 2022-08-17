@@ -102,11 +102,11 @@ class SlayTheSpireGymEnv(gym.Env):
 
         # Create a sandbox directory where the subprocess will run
         try:
-            shutil.copytree(str(lib_dir), "tmp")
+            shutil.copytree(str(self.lib_dir), "tmp")
         except FileExistsError:
             pass
         try:
-            shutil.copytree(str(mods_dir), "tmp/mods")
+            shutil.copytree(str(self.mods_dir), "tmp/mods")
         except FileExistsError:
             pass
         preferences = PROJECT_ROOT / "build" / "preferences"
