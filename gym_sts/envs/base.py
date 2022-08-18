@@ -67,7 +67,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
         command = f"{pipe_script} {self.input_path} {self.output_path}"
-        config_file = Path("~/.config/ModTheSpire/CommunicationMod/config.properties").expanduser()
+        config_file = pathlib.Path("~/.config/ModTheSpire/CommunicationMod/config.properties").expanduser()
 
         with config_file.open(mode="w") as f:
             f.write(f"command={command}\n")
