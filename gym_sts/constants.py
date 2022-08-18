@@ -3,10 +3,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.absolute()
 
 JAVA_INSTALL = "/usr/bin/java"
-MTS_PATH = "lib/ModTheSpire.jar"
+MTS_JAR = "ModTheSpire.jar"
 EXTRA_ARGS = ["--skip-launcher", "--skip-intro", "--mods", "basemod,CommunicationMod"]
 
-# Only for non-Docker game state
-INPUT_FILE = "out/stsai_input"
-OUTPUT_FILE = "out/stsai_output"
-LOG_FILE = "out/stderr.log"
+DOCKER_IMAGE_TAG = "sts"

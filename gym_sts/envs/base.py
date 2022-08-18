@@ -12,7 +12,7 @@ from docker.models.containers import Container
 
 from gym_sts.communication import Communicator
 from gym_sts.spaces.observations import Observation
-from gym_sts.constants import *
+from gym_sts import constants
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -56,7 +56,7 @@ class SlayTheSpireGymEnv(gym.Env):
     @classmethod
     def build_image(cls) -> None:
         client = docker.from_env()
-        client.images.build(path=str(PROJECT_ROOT / "build"), tag="sts")
+        client.images.build(path=str(constants.PROJECT_ROOT / "build"), tag=constants.DOCKER_IMAGE_TAG)
 
     def _generate_communication_mod_config(self) -> None:
         """
@@ -65,7 +65,7 @@ class SlayTheSpireGymEnv(gym.Env):
         WARNING: This function will silently overwrite any existing config file.
         """
 
-        pipe_script = (PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
+        pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
         command = f"{pipe_script} {self.input_path} {self.output_path}"
         config_file = Path("~/.config/ModTheSpire/CommunicationMod/config.properties").expanduser()
 
@@ -77,12 +77,12 @@ class SlayTheSpireGymEnv(gym.Env):
         print("Starting STS in Docker container")
         self.client = docker.from_env()
         try:
-            self.client.images.get("sts")
+            self.client.images.get(constants.DOCKER_IMAGE_TAG)
         except docker.errors.ImageNotFound:
-            raise Exception("sts image not found. Please build it with SlayTheSpireGymEnv.build_image()")
+            raise Exception(f"{constants.DOCKER_IMAGE_TAG} image not found. Please build it with SlayTheSpireGymEnv.build_image()")
 
         self.container: Container = self.client.containers.run(
-            image='sts',
+            image=constants.DOCKER_IMAGE_TAG,
             remove=True,
             devices=['/dev/snd'],
             init=True,
@@ -109,7 +109,7 @@ class SlayTheSpireGymEnv(gym.Env):
             shutil.copytree(str(self.mods_dir), "tmp/mods")
         except FileExistsError:
             pass
-        preferences = PROJECT_ROOT / "build" / "preferences"
+        preferences = constants.PROJECT_ROOT / "build" / "preferences"
         shutil.copytree(str(preferences), "tmp/preferences", dirs_exist_ok=True)
 
         self._generate_communication_mod_config()
@@ -117,7 +117,7 @@ class SlayTheSpireGymEnv(gym.Env):
         os.chdir("tmp")
 
         self.process = subprocess.Popen(
-            [JAVA_INSTALL, "-jar" , "ModTheSpire.jar"] + EXTRA_ARGS,
+            [constants.JAVA_INSTALL, "-jar" , constants.MTS_JAR] + constants.EXTRA_ARGS,
             stdout=self.logfile, stderr=self.logfile)
         atexit.register(lambda: self.process.kill())
 
@@ -140,18 +140,30 @@ class SlayTheSpireGymEnv(gym.Env):
         # If still alive
         # TODO(collin): document/clean this up
         if not obs.game_over:
+            # Open the menu in the upper right of the screen
             self.communicator.click(1900, 10)
+
+            # Click "abandon run"
             self.communicator.click(1500, 240)
             self.communicator.click(1500, 240)
+
+            # Confirm
             self.communicator.click(830, 700)
             self.communicator.click(830, 700)
+
+            # Acknowledge death
             self.communicator.click(950, 920)
             self.communicator.click(950, 920)
+
+            # Return to main menu
             self.communicator.click(950, 950)
             self.communicator.click(950, 950)
         else:
+            # Acknowledge death
             self.communicator.click(950, 920)
             self.communicator.click(950, 920)
+
+            # Return to main menu
             self.communicator.click(950, 950)
             self.communicator.click(950, 950)
 
