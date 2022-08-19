@@ -12,7 +12,9 @@ def main():
     parser.add_argument("--headless", action="store_true")
     args = parser.parse_args()
 
-    env = SlayTheSpireGymEnv(args.lib_dir, args.mods_dir, args.out_dir, headless=args.headless)
+    env = SlayTheSpireGymEnv(
+        args.lib_dir, args.mods_dir, args.out_dir, headless=args.headless
+    )
     env.reset()
 
     while True:

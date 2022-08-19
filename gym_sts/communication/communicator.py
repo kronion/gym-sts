@@ -33,13 +33,13 @@ class Communicator:
 
     def choose(self, choice) -> Observation:
         self.receiver.empty_fifo()
-        self.sender.choose(choice)
+        self.sender.send_choose(choice)
         state = self.receiver.receive_game_state()
         return Observation(state)
 
     def click(self, x: int, y: int, left: bool = True) -> Observation:
         self.receiver.empty_fifo()
-        self.sender.send_click(x,y, left=left)
+        self.sender.send_click(x, y, left=left)
         state = self.receiver.receive_game_state()
         return Observation(state)
 

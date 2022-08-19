@@ -38,5 +38,7 @@ class Receiver:
             # Try again in 5 milliseconds
             time.sleep(0.05)
 
-
-        raise Exception("Waited 1000 messages for game state to be ready for command, but it didn't happen.")
+        raise Exception(
+            "Waited 1000 messages for game state to be ready for command, "
+            "but it didn't happen."
+        )

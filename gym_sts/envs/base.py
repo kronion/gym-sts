@@ -4,26 +4,28 @@ import pathlib
 import random
 import shutil
 import subprocess
-from typing import Optional
+from typing import Optional, Tuple, Union
 
 import docker
 import gym
 from docker.models.containers import Container
 
+from gym_sts import constants
 from gym_sts.communication import Communicator
 from gym_sts.spaces.observations import Observation
-from gym_sts import constants
 
 
 class SlayTheSpireGymEnv(gym.Env):
-    def __init__(self, lib_dir: str, mods_dir: str, output_dir: str, headless: bool = False):
+    def __init__(
+        self, lib_dir: str, mods_dir: str, output_dir: str, headless: bool = False
+    ):
         """
         Gym env to interact with the Slay the Spire video game.
 
         Args:
             lib_dir: The directory containing desktop-1.0.jar and ModTheSpire.jar.
             mods_dir: The directory containing BaseMod.jar and CommunicationMod.jar.
-            output_dir: Directory used for intercommunication between env and containers.
+            output_dir: Directory used for communication between env and containers.
             headless: If True, run the game in a headless Docker container. Otherwise,
                 run the game directly on the host (presumably with a visible interface).
         """
@@ -50,13 +52,15 @@ class SlayTheSpireGymEnv(gym.Env):
         self.ready()
 
         # Set on first reset
-        self.seed = None
-        self.prng = None
+        self.seed: Optional[int] = None
+        self.prng: Optional[random.Random] = None
 
     @classmethod
     def build_image(cls) -> None:
         client = docker.from_env()
-        client.images.build(path=str(constants.PROJECT_ROOT / "build"), tag=constants.DOCKER_IMAGE_TAG)
+        client.images.build(
+            path=str(constants.PROJECT_ROOT / "build"), tag=constants.DOCKER_IMAGE_TAG
+        )
 
     def _generate_communication_mod_config(self) -> None:
         """
@@ -67,7 +71,9 @@ class SlayTheSpireGymEnv(gym.Env):
 
         pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
         command = f"{pipe_script} {self.input_path} {self.output_path}"
-        config_file = pathlib.Path("~/.config/ModTheSpire/CommunicationMod/config.properties").expanduser()
+        config_file = pathlib.Path(
+            "~/.config/ModTheSpire/CommunicationMod/config.properties"
+        ).expanduser()
 
         with config_file.open(mode="w") as f:
             f.write(f"command={command}\n")
@@ -79,12 +85,15 @@ class SlayTheSpireGymEnv(gym.Env):
         try:
             self.client.images.get(constants.DOCKER_IMAGE_TAG)
         except docker.errors.ImageNotFound:
-            raise Exception(f"{constants.DOCKER_IMAGE_TAG} image not found. Please build it with SlayTheSpireGymEnv.build_image()")
+            raise Exception(
+                f"{constants.DOCKER_IMAGE_TAG} image not found. "
+                "Please build it with SlayTheSpireGymEnv.build_image()"
+            )
 
         self.container: Container = self.client.containers.run(
             image=constants.DOCKER_IMAGE_TAG,
             remove=True,
-            devices=['/dev/snd'],
+            devices=["/dev/snd"],
             init=True,
             detach=True,
             volumes={
@@ -93,8 +102,8 @@ class SlayTheSpireGymEnv(gym.Env):
                 self.mods_dir: dict(bind="/game/mods", mode="ro"),
             },
         )
-        print(f'started docker container {self.container.name}')
-        print(f'To view logs, run `docker logs {self.container.name}`.')
+        print(f"started docker container {self.container.name}")
+        print(f"To view logs, run `docker logs {self.container.name}`.")
         atexit.register(self.container.stop)
 
     def _run_locally(self) -> None:
@@ -117,8 +126,10 @@ class SlayTheSpireGymEnv(gym.Env):
         os.chdir("tmp")
 
         self.process = subprocess.Popen(
-            [constants.JAVA_INSTALL, "-jar" , constants.MTS_JAR] + constants.EXTRA_ARGS,
-            stdout=self.logfile, stderr=self.logfile)
+            [constants.JAVA_INSTALL, "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
+            stdout=self.logfile,
+            stderr=self.logfile,
+        )
         atexit.register(lambda: self.process.kill())
 
     def _do_action(self, action: str) -> Observation:
@@ -190,7 +201,12 @@ class SlayTheSpireGymEnv(gym.Env):
         # print("Waiting for game to be stable...")
         # self.start_message = self.receiver.receive_game_state()
 
-    def reset(self, seed: Optional[int] = None, return_info: bool = False):
+    def reset(
+        self,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ) -> Union[Observation, Tuple[Observation, dict]]:
         self._end_game()
 
         if seed is not None:
