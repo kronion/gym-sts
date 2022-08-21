@@ -1,109 +1,97 @@
-from dataclasses import dataclass
+from typing import Optional
 
 from gym.spaces import Discrete
+from pydantic import BaseModel, PrivateAttr
 
 from gym_sts.spaces import constants
 
 
-@dataclass
-class PickCard:
+class Action(BaseModel):
+    _id: int = PrivateAttr(-1)
+
+    def to_command(self):
+        raise RuntimeError("not implemented")
+
+
+class PickCard(Action):
     card_id: int
     upgraded: bool
 
-    def to_command(self, last_observation):
+    def to_command(self):
         # TODO: Finish this
-        raise RecursionError("not implemented")
+        raise RuntimeError("not implemented")
 
 
-@dataclass
-class PlayCardUntargeted:
+class PlayCard(Action):
+    # NOTE: Card position starts with 1
     card_position: int
-
-    def to_command(self, last_observation):
-        return f"PLAY {self.card_position}"
-
-
-@dataclass
-class PlayCardTargeted:
-    # NOTE: Card position starts from 1
-    card_position: int
-    target: int
-
-    def to_command(self, last_observation):
-        return f"PLAY {self.card_position} {self.target}"
-
-
-@dataclass
-class UsePotionUntargeted:
-    potion_index: int
-
-    def to_command(self, last_observation):
-        return f"POTION USE {self.potion_index}"
-
-
-@dataclass
-class UsePotionTargeted:
-    potion_index: int
-    target_index: int
+    target_index: Optional[int]
 
     def to_command(self):
-        return f"POTION USE {self.potion_index} {self.target_index}"
+        target = "" if self.target_index is None else self.target_index
+        return f"PLAY {self.card_position} {target}"
 
 
-@dataclass
-class DiscardPotion:
+class UsePotion(Action):
+    potion_index: int
+    target_index: Optional[int] = None
+
+    def to_command(self):
+        target = "" if self.target_index is None else self.target_index
+        return f"POTION USE {self.potion_index} {target}"
+
+
+class DiscardPotion(Action):
     potion_index: int
 
     def to_command(self):
         return f"POTION DISCARD {self.potion_index}"
 
 
-@dataclass
-class Choose:
+class Choose(Action):
     choice_index: int
 
     def to_command(self):
         return f"CHOOSE {self.choice_index}"
 
 
-@dataclass
-class EndTurn:
+class EndTurn(Action):
     def to_command(self):
         return "END"
 
 
-@dataclass
-class Return:
+class Return(Action):
     def to_command(self):
         return "RETURN"
 
 
-@dataclass
-class Proceed:
+class Proceed(Action):
     def to_command(self):
         return "PROCEED"
 
 
-def all_actions():
+def all_actions() -> list[Action]:
     actions = [EndTurn(), Return(), Proceed()]
 
     for i in range(constants.NUM_CHOICES):
-        actions.append(Choose(i))
+        actions.append(Choose(choice_index=i))
 
     for i in range(constants.NUM_POTION_SLOTS):
-        actions.append(UsePotionUntargeted(i))
-        actions.append(DiscardPotion(i))
+        actions.append(UsePotion(potion_index=i))
+        actions.append(DiscardPotion(potion_index=i))
         for j in range(constants.NUM_ENEMIES):
-            actions.append(UsePotionTargeted(i, j))
+            actions.append(UsePotion(potion_index=i, target_index=j))
 
     for i in range(1, constants.HAND_SIZE + 1):
-        actions.append(PlayCardUntargeted(i))
+        actions.append(PlayCard(card_position=i))
         for j in range(constants.NUM_ENEMIES):
-            actions.append(PlayCardTargeted(i, j))
+            actions.append(PlayCard(card_position=i, target_index=j))
+
+    for i, action in enumerate(actions):
+        action._id = i
 
     return actions
 
 
 ACTIONS = all_actions()
-
 ACTION_SPACE = Discrete(len(ACTIONS))

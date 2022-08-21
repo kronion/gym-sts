@@ -12,7 +12,8 @@ from docker.models.containers import Container
 
 from gym_sts import constants
 from gym_sts.communication import Communicator
-from gym_sts.spaces.observations import Observation
+from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS
+from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -54,6 +55,9 @@ class SlayTheSpireGymEnv(gym.Env):
         # Set on first reset
         self.seed: Optional[int] = None
         self.prng: Optional[random.Random] = None
+
+        self.action_space = ACTION_SPACE
+        self.observation_space = OBSERVATION_SPACE
 
     @classmethod
     def build_image(cls) -> None:
@@ -227,7 +231,10 @@ class SlayTheSpireGymEnv(gym.Env):
         else:
             return obs
 
-    def step(self, action):
-        obs = self.communicator.end()
+    def step(self, action_id: int) -> Tuple[Observation, float, bool, dict]:
+        action = ACTIONS[action_id]
+        obs = self.communicator._manual_command(action.to_command())
 
-        return obs
+        reward = 1
+
+        return obs, reward, obs.game_over, {"observation": obs}
