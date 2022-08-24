@@ -52,6 +52,7 @@ OBSERVATION_SPACE = Dict(
                 "relics": MultiBinary(constants.NUM_RELICS),
                 "deck": generate_card_space()
                 # TODO: Add map
+                # TODO: Add keys
             }
         ),
         "combat_state": Dict(
@@ -73,7 +74,7 @@ OBSERVATION_SPACE = Dict(
             }
         ),
         # TODO: Worry about shop
-        # TODO: Possibly have Discrete space telling AI what screen it's on
+        # TODO: Possibly have Discrete space telling AI what screen it's on (e.g. screen type)
         # TODO: Worry about random events
     }
 )
