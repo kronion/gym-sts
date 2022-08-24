@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
 from gym_sts.spaces import constants
@@ -81,8 +83,97 @@ class ObservationError(Exception):
     pass
 
 
+class ObsComponent(ABC):
+    @abstractmethod
+    def serialize(self):
+        raise RuntimeError("Not implemented")
+
+
+def to_binary_array(n: int, digits: int) -> list[int]:
+    array = [0] * digits
+
+    idx = 0
+    n_copy = n
+    while n_copy > 0:
+        if idx >= digits:
+            raise ValueError(
+                f"{n} is too large to represent with {digits} binary digits"
+            )
+
+        n_copy, r = divmod(n_copy, 2)
+        if r > 0:
+            array[idx] = 1
+        idx += 1
+
+    return array
+
+
+def _serialize_health(hp: int, max_hp: int) -> dict[str, list[int]]:
+    return {
+        "hp": to_binary_array(hp, constants.LOG_MAX_HP),
+        "max_hp": to_binary_array(max_hp, constants.LOG_MAX_HP),
+    }
+
+
+class PersistentStateObs(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.hp = 0
+        self.max_hp = 0
+        self.gold = 0
+        self.potions = []
+        self.relics = []
+        self.deck = []
+
+        if "game_state" in state:
+            self.hp = state["game_state"]["current_hp"]
+            self.max_hp = state["game_state"]["max_hp"]
+            self.gold = state["game_state"]["gold"]
+            self.potions = state["game_state"]["potions"]
+            self.relics = state["game_state"]["relics"]
+            self.deck = state["game_state"]["deck"]
+
+    def serialize(self):
+        health = _serialize_health(self.hp, self.max_hp)
+        gold = to_binary_array(self.gold, constants.LOG_MAX_GOLD)
+
+        potions = [
+            constants.ALL_POTIONS.index("Potion Slot")
+        ] * constants.NUM_POTION_SLOTS
+
+        for i, potion in enumerate(self.potions):
+            potions[i] = constants.ALL_POTIONS.index(potion["id"])
+
+        relics = [False] * constants.NUM_RELICS
+        for relic in self.relics:
+            relics[constants.ALL_RELICS.index(relic["id"])] = True
+        relics = [int(relic) for relic in relics]
+
+        # TODO handle Searing Blow, which can be upgraded unlimited times
+        deck = [0] * constants.NUM_CARDS * 2
+        for card in self.deck:
+            card_idx = constants.ALL_CARDS.index(card["id"]) * 2
+            if card["upgrades"] > 0:
+                card_idx += 1
+
+            deck[card_idx] += 1
+
+        response = {
+            "health": health,
+            "gold": gold,
+            "potions": potions,
+            "relics": relics,
+            "deck": deck,
+            # TODO: Add map
+        }
+
+        return response
+
+
 class Observation:
     def __init__(self, state: dict):
+        self.persistent_state = PersistentStateObs(state)
+
         # Keep a reference to the raw CommunicationMod response
         self.state = state
 
@@ -120,3 +211,6 @@ class Observation:
     @property
     def stable(self) -> bool:
         return self.state["ready_for_command"]
+
+    def serialize(self):
+        return {"persistent_state": self.persistent_state.serialize()}

@@ -1,4 +1,4 @@
-LOG_MAX_HP = 9
+LOG_MAX_HP = 10
 LOG_MAX_GOLD = 12
 LOG_MAX_ENERGY = 4
 LOG_MAX_BLOCK = 10
@@ -871,6 +871,7 @@ ALL_EFFECTS = [
     "Accuracy",
 ]
 ALL_POTIONS = [
+    "Potion Slot",
     "EntropicBrew",
     "Regen Potion",
     "AttackPotion",
@@ -896,7 +897,6 @@ ALL_POTIONS = [
     "SmokeBomb",
     "Block Potion",
     "BottledMiracle",
-    "Potion Slot",
     "CunningPotion",
     "FocusPotion",
     "EssenceOfDarkness",
