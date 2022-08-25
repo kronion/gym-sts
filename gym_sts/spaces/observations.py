@@ -50,9 +50,9 @@ OBSERVATION_SPACE = Dict(
                     [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
                 ),
                 "relics": MultiBinary(constants.NUM_RELICS),
-                "deck": generate_card_space()
+                "deck": generate_card_space(),
+                "keys": MultiBinary(constants.NUM_KEYS),
                 # TODO: Add map
-                # TODO: Add keys
             }
         ),
         "combat_state": Dict(
@@ -74,7 +74,8 @@ OBSERVATION_SPACE = Dict(
             }
         ),
         # TODO: Worry about shop
-        # TODO: Possibly have Discrete space telling AI what screen it's on (e.g. screen type)
+        # TODO: Possibly have Discrete space telling AI what screen it's on
+        # (e.g. screen type)
         # TODO: Worry about random events
     }
 )
@@ -125,14 +126,19 @@ class PersistentStateObs(ObsComponent):
         self.potions = []
         self.relics = []
         self.deck = []
+        self.keys = {}
 
         if "game_state" in state:
-            self.hp = state["game_state"]["current_hp"]
-            self.max_hp = state["game_state"]["max_hp"]
-            self.gold = state["game_state"]["gold"]
-            self.potions = state["game_state"]["potions"]
-            self.relics = state["game_state"]["relics"]
-            self.deck = state["game_state"]["deck"]
+            game_state = state["game_state"]
+            self.hp = game_state["current_hp"]
+            self.max_hp = game_state["max_hp"]
+            self.gold = game_state["gold"]
+            self.potions = game_state["potions"]
+            self.relics = game_state["relics"]
+            self.deck = game_state["deck"]
+
+            if "keys" in game_state:
+                self.keys = game_state["keys"]
 
     def serialize(self):
         health = _serialize_health(self.hp, self.max_hp)
@@ -159,12 +165,19 @@ class PersistentStateObs(ObsComponent):
 
             deck[card_idx] += 1
 
+        keys = [False] * constants.NUM_KEYS
+        for i, key in enumerate(["ruby", "emerald", "sapphire"]):
+            if key in self.keys:
+                keys[i] = self.keys[key]
+        keys = [int(key) for key in keys]
+
         response = {
             "health": health,
             "gold": gold,
             "potions": potions,
             "relics": relics,
             "deck": deck,
+            "keys": keys,
             # TODO: Add map
         }
 

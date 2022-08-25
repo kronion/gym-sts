@@ -1013,3 +1013,5 @@ HAND_SIZE = 10
 
 # Wiki seems to list 108 buffs and debuffs, I may have missed a few
 NUM_EFFECTS = len(ALL_EFFECTS)
+
+NUM_KEYS = 3
