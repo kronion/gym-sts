@@ -638,6 +638,7 @@ ALL_RELICS = [
     "Molten Egg 2",
 ]
 ALL_MONSTER_TYPES = [
+    "EMPTY",
     "GremlinNob",
     "GremlinTsundere",
     "FungiBeast",
@@ -916,6 +917,7 @@ ALL_POTIONS = [
     "ElixirPotion",
 ]
 ALL_INTENTS = [
+    "NONE",
     "ATTACK",
     "ATTACK_BUFF",
     "ATTACK_DEBUFF",
@@ -929,7 +931,6 @@ ALL_INTENTS = [
     "DEFEND_BUFF",
     "ESCAPE",
     "MAGIC",
-    "NONE",
     "SLEEP",
     "STUN",
     "UNKNOWN",
