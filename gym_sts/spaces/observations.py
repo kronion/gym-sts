@@ -10,7 +10,7 @@ def generate_card_space():
     # Generally beyond some number of cards you don't actually care
     # how many cards you have
     # But this could be optimized
-    return MultiDiscrete([5] * constants.NUM_CARDS * 2)
+    return MultiDiscrete([constants.MAX_COPIES_OF_CARD] * constants.NUM_CARDS * 2)
 
 
 def generate_effect_space():
@@ -41,6 +41,24 @@ def generate_enemy_space():
     )
 
 
+def generate_combat_space():
+    return Dict(
+        {
+            "turn": MultiBinary(constants.LOG_MAX_TURN),
+            # Every card + upgrade, or no card
+            "hand": MultiDiscrete([constants.NUM_CARDS * 2 + 1] * constants.HAND_SIZE),
+            "energy": MultiBinary(constants.LOG_MAX_ENERGY),
+            "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
+            "block": MultiBinary(constants.LOG_MAX_BLOCK),
+            "effects": generate_effect_space(),
+            "enemies": Tuple([generate_enemy_space()] * constants.NUM_ENEMIES),
+            "discard": generate_card_space(),
+            "draw": generate_card_space(),
+            "exhaust": generate_card_space(),
+        }
+    )
+
+
 OBSERVATION_SPACE = Dict(
     {
         "persistent_state": Dict(
@@ -56,23 +74,7 @@ OBSERVATION_SPACE = Dict(
                 # TODO: Add map
             }
         ),
-        "combat_state": Dict(
-            {
-                # Every card + upgrade, or no card
-                "hand": MultiDiscrete(
-                    [constants.NUM_CARDS * 2 + 1] * constants.HAND_SIZE
-                ),
-                "energy": MultiBinary(constants.LOG_MAX_ENERGY),
-                # TODO: Add orbs
-                "block": MultiBinary(constants.LOG_MAX_BLOCK),
-                "effects": generate_effect_space(),
-                "enemies": Tuple([generate_enemy_space()] * constants.NUM_ENEMIES),
-                "discard": generate_card_space(),
-                "draw": generate_card_space(),
-                # TODO: Worry about exhaust pile
-                # TODO: Add turn (for things like cycle fights and stone calendar)
-            }
-        ),
+        "combat_state": generate_combat_space(),
         # TODO: Worry about shop
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
@@ -118,8 +120,7 @@ def _serialize_cards(cards: list) -> list[int]:
         if card["upgrades"] > 0:
             card_idx += 1
 
-        # TODO no magic number for this limit
-        if serialized[card_idx] < 5:
+        if serialized[card_idx] < constants.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1
 
     return serialized
@@ -151,6 +152,20 @@ def _serialize_effects(effects: list) -> list[dict]:
             encoding["value"] = to_binary_array(value, constants.LOG_MAX_EFFECT)
 
         serialized.append(encoding)
+
+    return serialized
+
+
+def _serialize_orbs(orbs: list) -> list:
+    serialized = [0] * constants.MAX_ORB_SLOTS
+    for i, orb in enumerate(orbs):
+        if "id" in orb:
+            orb_idx = constants.ALL_ORBS.index(orb["id"])
+        else:
+            # STS seems to have a bug where empty orbs sometimes have no ID
+            orb_idx = constants.ALL_ORBS.index("Empty")
+
+        serialized[i] = orb_idx
 
     return serialized
 
@@ -218,24 +233,31 @@ class PersistentStateObs(ObsComponent):
 class CombatStateObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
+        self.turn = 0
+
         self.hand = []
         self.discard = []
         self.draw = []
+        self.exhaust = []
 
         self.enemies = []
 
         self.energy = 0
         self.block = 0
         self.effects = []
+        self.orbs = []
 
         if "game_state" in state:
             game_state = state["game_state"]
             if "combat_state" in game_state:
                 combat_state = game_state["combat_state"]
 
+                self.turn = combat_state["turn"]
+
                 self.hand = combat_state["hand"]
                 self.discard = combat_state["discard_pile"]
                 self.draw = combat_state["draw_pile"]
+                self.exhaust = combat_state["exhaust_pile"]
 
                 self.enemies = combat_state["monsters"]
 
@@ -243,6 +265,7 @@ class CombatStateObs(ObsComponent):
                 self.block = player_state["block"]
                 self.energy = player_state["energy"]
                 self.effects = player_state["powers"]
+                self.orbs = player_state["orbs"]
 
     def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
         if enemy is not None:
@@ -265,6 +288,7 @@ class CombatStateObs(ObsComponent):
         return serialized
 
     def serialize(self) -> dict:
+        turn = to_binary_array(self.turn, constants.LOG_MAX_TURN)
         energy = to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
         block = to_binary_array(self.block, constants.LOG_MAX_BLOCK)
 
@@ -279,6 +303,7 @@ class CombatStateObs(ObsComponent):
             hand[i] = card_id
 
         effects = _serialize_effects(self.effects)
+        orbs = _serialize_orbs(self.orbs)
 
         enemies = []
         for i in range(constants.NUM_ENEMIES):
@@ -290,15 +315,19 @@ class CombatStateObs(ObsComponent):
 
         discard = _serialize_cards(self.discard)
         draw = _serialize_cards(self.draw)
+        exhaust = _serialize_cards(self.exhaust)
 
         response = {
+            "turn": turn,
             "hand": hand,
             "energy": energy,
             "block": block,
             "effects": effects,
+            "orbs": orbs,
             "enemies": enemies,
             "discard": discard,
             "draw": draw,
+            "exhaust": exhaust,
         }
 
         return response

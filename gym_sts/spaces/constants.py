@@ -3,6 +3,7 @@ LOG_MAX_GOLD = 12
 LOG_MAX_ENERGY = 4
 LOG_MAX_BLOCK = 10
 LOG_MAX_EFFECT = 10
+LOG_MAX_TURN = 8
 
 # All cards and relics for mapping purposes
 ALL_CARDS = [
@@ -871,6 +872,16 @@ ALL_EFFECTS = [
     "Infinite Blades",
     "Accuracy",
 ]
+
+ALL_ORBS = [
+    "None",  # Indicates the slot does not exist
+    "Empty",
+    "Dark",
+    "Frost",
+    "Lightning",
+    "Plasma",
+]
+
 ALL_POTIONS = [
     "Potion Slot",
     "EntropicBrew",
@@ -1011,6 +1022,13 @@ NUM_MONSTER_TYPES = len(ALL_MONSTER_TYPES)
 NUM_CARDS = len(ALL_CARDS)
 
 HAND_SIZE = 10
+
+# There's no real limit in the game, but this value greatly impacts the size
+# of the observation space.
+MAX_COPIES_OF_CARD = 5
+
+NUM_ORBS = len(ALL_ORBS)
+MAX_ORB_SLOTS = 10
 
 # Wiki seems to list 108 buffs and debuffs, I may have missed a few
 NUM_EFFECTS = len(ALL_EFFECTS)
