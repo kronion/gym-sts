@@ -446,6 +446,7 @@ ALL_CARDS = [
     "Wound",
     "Slimed",
 ]
+
 ALL_RELICS = [
     "CaptainsWheel",
     "SsserpentHead",
@@ -638,6 +639,7 @@ ALL_RELICS = [
     "Strange Spoon",
     "Molten Egg 2",
 ]
+
 ALL_MONSTER_TYPES = [
     "EMPTY",
     "GremlinNob",
@@ -709,6 +711,7 @@ ALL_MONSTER_TYPES = [
     "SpireSpear",
     "CorruptHeart",
 ]
+
 ALL_EFFECTS = [
     "Conserve",
     "Sharp Hide",
@@ -927,6 +930,7 @@ ALL_POTIONS = [
     "BloodPotion",
     "ElixirPotion",
 ]
+
 ALL_INTENTS = [
     "NONE",
     "ATTACK",
@@ -946,6 +950,7 @@ ALL_INTENTS = [
     "STUN",
     "UNKNOWN",
 ]
+
 ALL_EVENTS = [
     "Shining Light",
     "World of Goop",
@@ -1034,3 +1039,8 @@ MAX_ORB_SLOTS = 10
 NUM_EFFECTS = len(ALL_EFFECTS)
 
 NUM_KEYS = 3
+
+SHOP_CARD_COUNT = 7
+SHOP_RELIC_COUNT = 3
+SHOP_POTION_COUNT = 3
+SHOP_LOG_MAX_COST = 10

@@ -59,6 +59,54 @@ def generate_combat_space():
     )
 
 
+def generate_shop_space():
+    return Dict(
+        {
+            "cards": Tuple(
+                [
+                    Dict(
+                        {
+                            # Every card + upgrade, or no card
+                            "card": Discrete(constants.NUM_CARDS * 2 + 1),
+                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                        }
+                    )
+                ]
+                * constants.SHOP_CARD_COUNT,
+            ),
+            "relics": Tuple(
+                [
+                    Dict(
+                        {
+                            # Every relic, or no relic
+                            "relic": Discrete(constants.NUM_RELICS + 1),
+                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                        }
+                    )
+                ]
+                * constants.SHOP_RELIC_COUNT
+            ),
+            "potions": Tuple(
+                [
+                    Dict(
+                        {
+                            "potion": Discrete(constants.NUM_POTIONS),
+                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                        }
+                    )
+                ]
+                * constants.SHOP_POTION_COUNT
+            ),
+            "purge": Dict(
+                {
+                    "available": Discrete(2),
+                    "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                }
+            ),
+        }
+    )
+
+
 OBSERVATION_SPACE = Dict(
     {
         "persistent_state": Dict(
@@ -75,7 +123,7 @@ OBSERVATION_SPACE = Dict(
             }
         ),
         "combat_state": generate_combat_space(),
-        # TODO: Worry about shop
+        "shop_state": generate_shop_space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
         # TODO: Worry about random events
@@ -112,13 +160,20 @@ def to_binary_array(n: int, digits: int) -> list[int]:
     return array
 
 
+def _serialize_card(card: dict) -> int:
+    # TODO update constant so adding 1 isn't needed
+    card_idx = constants.ALL_CARDS.index(card["id"]) * 2 + 1
+    if card["upgrades"] > 0:
+        card_idx += 1
+
+    return card_idx
+
+
 def _serialize_cards(cards: list) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
     serialized = [0] * constants.NUM_CARDS * 2
     for card in cards:
-        card_idx = constants.ALL_CARDS.index(card["id"]) * 2
-        if card["upgrades"] > 0:
-            card_idx += 1
+        card_idx = _serialize_card(card)
 
         if serialized[card_idx] < constants.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1
@@ -333,10 +388,88 @@ class CombatStateObs(ObsComponent):
         return response
 
 
+class ShopStateObs(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.cards = []
+        self.relics = []
+        self.potions = []
+        self.purge_available = False
+        self.purge_cost = 0
+
+        if "game_state" in state:
+            game_state = state["game_state"]
+            if (
+                "screen_type" in game_state
+                and game_state["screen_type"] == "SHOP_SCREEN"
+            ):
+                screen_state = game_state["screen_state"]
+                self.cards = screen_state["cards"]
+                self.relics = screen_state["relics"]
+                self.potions = screen_state["potions"]
+                self.purge_available = screen_state["purge_available"]
+                self.purge_cost = screen_state["purge_cost"]
+
+    def serialize(self) -> dict:
+        serialized_cards = [
+            {
+                "card": 0,
+                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
+            }
+        ] * constants.SHOP_CARD_COUNT
+        for i, card in enumerate(self.cards):
+            serialized = {
+                "card": _serialize_card(card),
+                "cost": to_binary_array(card["price"], constants.SHOP_LOG_MAX_COST),
+            }
+            serialized_cards[i] = serialized
+
+        serialized_relics = [
+            {
+                "relic": 0,
+                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
+            }
+        ] * constants.SHOP_RELIC_COUNT
+        for i, relic in enumerate(self.relics):
+            serialized = {
+                # TODO eliminate need to pad by 1
+                "relic": constants.ALL_RELICS.index(relic["id"]) + 1,
+                "cost": to_binary_array(relic["price"], constants.SHOP_LOG_MAX_COST),
+            }
+            serialized_relics[i] = serialized
+
+        serialized_potions = [
+            {
+                "potion": 0,
+                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
+            }
+        ] * constants.SHOP_POTION_COUNT
+        for i, potion in enumerate(self.potions):
+            serialized = {
+                # TODO eliminate need to pad by 1
+                "potion": constants.ALL_POTIONS.index(potion["id"]),
+                "cost": to_binary_array(potion["price"], constants.SHOP_LOG_MAX_COST),
+            }
+            serialized_potions[i] = serialized
+
+        serialized_purge = {
+            "available": int(self.purge_available),
+            "price": to_binary_array(self.purge_cost, constants.SHOP_LOG_MAX_COST),
+        }
+
+        return {
+            "cards": serialized_cards,
+            "relics": serialized_relics,
+            "potions": serialized_potions,
+            "purge": serialized_purge,
+        }
+
+
 class Observation:
     def __init__(self, state: dict):
         self.persistent_state = PersistentStateObs(state)
         self.combat_state = CombatStateObs(state)
+        self.shop_state = ShopStateObs(state)
 
         # Keep a reference to the raw CommunicationMod response
         self.state = state
@@ -380,4 +513,5 @@ class Observation:
         return {
             "persistent_state": self.persistent_state.serialize(),
             "combat_state": self.combat_state.serialize(),
+            "shop_state": self.shop_state.serialize(),
         }
