@@ -31,6 +31,22 @@ def generate_health_space():
     )
 
 
+def generate_persistent_space():
+    return Dict(
+        {
+            "health": generate_health_space(),
+            "gold": MultiBinary(constants.LOG_MAX_GOLD),
+            "potions": MultiDiscrete(
+                [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
+            ),
+            "relics": MultiBinary(constants.NUM_RELICS),
+            "deck": generate_card_space(),
+            "keys": MultiBinary(constants.NUM_KEYS),
+            # TODO: Add map
+        }
+    )
+
+
 def generate_enemy_space():
     return Dict(
         {
@@ -108,23 +124,25 @@ def generate_shop_space():
     )
 
 
+def generate_campfire_space():
+    return Dict(
+        {
+            "rest": Discrete(2),
+            "smith": Discrete(2),
+            "lift": Discrete(2),
+            "toke": Discrete(2),
+            "dig": Discrete(2),
+            "recall": Discrete(2),
+        }
+    )
+
+
 OBSERVATION_SPACE = Dict(
     {
-        "persistent_state": Dict(
-            {
-                "health": generate_health_space(),
-                "gold": MultiBinary(constants.LOG_MAX_GOLD),
-                "potions": MultiDiscrete(
-                    [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
-                ),
-                "relics": MultiBinary(constants.NUM_RELICS),
-                "deck": generate_card_space(),
-                "keys": MultiBinary(constants.NUM_KEYS),
-                # TODO: Add map
-            }
-        ),
+        "persistent_state": generate_persistent_space(),
         "combat_state": generate_combat_space(),
         "shop_state": generate_shop_space(),
+        "campfire_state": generate_campfire_space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
         # TODO: Worry about random events
@@ -456,11 +474,54 @@ class ShopStateObs(ObsComponent):
         }
 
 
+class CampfireStateObs(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.rest = False
+        self.smith = False
+        self.lift = False
+        self.toke = False
+        self.dig = False
+        self.recall = False
+
+        if "game_state" in state:
+            game_state = state["game_state"]
+            if "screen_type" in game_state and game_state["screen_type"] == "REST":
+                screen_state = game_state["screen_state"]
+                if screen_state["has_rested"]:
+                    return
+
+                rest_options = screen_state["rest_options"]
+                if "rest" in rest_options:
+                    self.rest = True
+                if "smith" in rest_options:
+                    self.smith = True
+                if "lift" in rest_options:
+                    self.lift = True
+                if "toke" in rest_options:
+                    self.toke = True
+                if "dig" in rest_options:
+                    self.dig = True
+                if "recall" in rest_options:
+                    self.recall = True
+
+    def serialize(self) -> dict:
+        return {
+            "rest": int(self.rest),
+            "smith": int(self.smith),
+            "lift": int(self.lift),
+            "toke": int(self.toke),
+            "dig": int(self.dig),
+            "recall": int(self.recall),
+        }
+
+
 class Observation:
     def __init__(self, state: dict):
         self.persistent_state = PersistentStateObs(state)
         self.combat_state = CombatStateObs(state)
         self.shop_state = ShopStateObs(state)
+        self.campfire_state = CampfireStateObs(state)
 
         # Keep a reference to the raw CommunicationMod response
         self.state = state
@@ -505,4 +566,5 @@ class Observation:
             "persistent_state": self.persistent_state.serialize(),
             "combat_state": self.combat_state.serialize(),
             "shop_state": self.shop_state.serialize(),
+            "campfire_state": self.campfire_state.serialize(),
         }
