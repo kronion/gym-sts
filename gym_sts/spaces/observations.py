@@ -10,7 +10,9 @@ def generate_card_space():
     # Generally beyond some number of cards you don't actually care
     # how many cards you have
     # But this could be optimized
-    return MultiDiscrete([constants.MAX_COPIES_OF_CARD] * constants.NUM_CARDS * 2)
+    return MultiDiscrete(
+        [constants.MAX_COPIES_OF_CARD] * constants.NUM_CARDS_WITH_UPGRADES
+    )
 
 
 def generate_effect_space():
@@ -45,8 +47,9 @@ def generate_combat_space():
     return Dict(
         {
             "turn": MultiBinary(constants.LOG_MAX_TURN),
-            # Every card + upgrade, or no card
-            "hand": MultiDiscrete([constants.NUM_CARDS * 2 + 1] * constants.HAND_SIZE),
+            "hand": MultiDiscrete(
+                [constants.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
+            ),
             "energy": MultiBinary(constants.LOG_MAX_ENERGY),
             "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
             "block": MultiBinary(constants.LOG_MAX_BLOCK),
@@ -66,8 +69,7 @@ def generate_shop_space():
                 [
                     Dict(
                         {
-                            # Every card + upgrade, or no card
-                            "card": Discrete(constants.NUM_CARDS * 2 + 1),
+                            "card": Discrete(constants.NUM_CARDS_WITH_UPGRADES),
                             "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
                         }
                     )
@@ -78,8 +80,7 @@ def generate_shop_space():
                 [
                     Dict(
                         {
-                            # Every relic, or no relic
-                            "relic": Discrete(constants.NUM_RELICS + 1),
+                            "relic": Discrete(constants.NUM_RELICS),
                             "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
                         }
                     )
@@ -161,8 +162,7 @@ def to_binary_array(n: int, digits: int) -> list[int]:
 
 
 def _serialize_card(card: dict) -> int:
-    # TODO update constant so adding 1 isn't needed
-    card_idx = constants.ALL_CARDS.index(card["id"]) * 2 + 1
+    card_idx = constants.ALL_CARDS.index(card["id"]) * 2
     if card["upgrades"] > 0:
         card_idx += 1
 
@@ -171,7 +171,7 @@ def _serialize_card(card: dict) -> int:
 
 def _serialize_cards(cards: list) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
-    serialized = [0] * constants.NUM_CARDS * 2
+    serialized = [0] * constants.NUM_CARDS_WITH_UPGRADES
     for card in cards:
         card_idx = _serialize_card(card)
 
@@ -252,9 +252,7 @@ class PersistentStateObs(ObsComponent):
         health = _serialize_health(self.hp, self.max_hp)
         gold = to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
-        potions = [
-            constants.ALL_POTIONS.index("Potion Slot")
-        ] * constants.NUM_POTION_SLOTS
+        potions = [0] * constants.NUM_POTION_SLOTS
 
         for i, potion in enumerate(self.potions):
             potions[i] = constants.ALL_POTIONS.index(potion["id"])
@@ -347,15 +345,10 @@ class CombatStateObs(ObsComponent):
         energy = to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
         block = to_binary_array(self.block, constants.LOG_MAX_BLOCK)
 
-        # TODO handle Searing Blow, which can be upgraded unlimited times
         hand = [0] * constants.HAND_SIZE
         for i, card in enumerate(self.hand):
-            # Add 1 so the 0 index is reserved for no card
-            card_id = constants.ALL_CARDS.index(card["id"]) * 2 + 1
-            if card["upgrades"] > 0:
-                card_id += 1
-
-            hand[i] = card_id
+            card_idx = _serialize_card(card)
+            hand[i] = card_idx
 
         effects = _serialize_effects(self.effects)
         orbs = _serialize_orbs(self.orbs)
@@ -432,8 +425,7 @@ class ShopStateObs(ObsComponent):
         ] * constants.SHOP_RELIC_COUNT
         for i, relic in enumerate(self.relics):
             serialized = {
-                # TODO eliminate need to pad by 1
-                "relic": constants.ALL_RELICS.index(relic["id"]) + 1,
+                "relic": constants.ALL_RELICS.index(relic["id"]),
                 "cost": to_binary_array(relic["price"], constants.SHOP_LOG_MAX_COST),
             }
             serialized_relics[i] = serialized
@@ -446,7 +438,6 @@ class ShopStateObs(ObsComponent):
         ] * constants.SHOP_POTION_COUNT
         for i, potion in enumerate(self.potions):
             serialized = {
-                # TODO eliminate need to pad by 1
                 "potion": constants.ALL_POTIONS.index(potion["id"]),
                 "cost": to_binary_array(potion["price"], constants.SHOP_LOG_MAX_COST),
             }

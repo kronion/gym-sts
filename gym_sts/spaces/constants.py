@@ -7,6 +7,7 @@ LOG_MAX_TURN = 8
 
 # All cards and relics for mapping purposes
 ALL_CARDS = [
+    "NONE",  # Indicates the absence of a card
     "Whirlwind",
     "Anger",
     "Feel No Pain",
@@ -448,6 +449,7 @@ ALL_CARDS = [
 ]
 
 ALL_RELICS = [
+    "NONE",  # Indicates the absence of a relic
     "CaptainsWheel",
     "SsserpentHead",
     "Orrery",
@@ -641,7 +643,7 @@ ALL_RELICS = [
 ]
 
 ALL_MONSTER_TYPES = [
-    "EMPTY",
+    "NONE",
     "GremlinNob",
     "GremlinTsundere",
     "FungiBeast",
@@ -877,7 +879,7 @@ ALL_EFFECTS = [
 ]
 
 ALL_ORBS = [
-    "None",  # Indicates the slot does not exist
+    "NONE",  # Indicates the slot does not exist
     "Empty",
     "Dark",
     "Frost",
@@ -886,6 +888,7 @@ ALL_ORBS = [
 ]
 
 ALL_POTIONS = [
+    "NONE",  # Indicates the slot does not exist
     "Potion Slot",
     "EntropicBrew",
     "Regen Potion",
@@ -1025,6 +1028,7 @@ NUM_MONSTER_TYPES = len(ALL_MONSTER_TYPES)
 
 # I estimate at most 400 excluding upgrades
 NUM_CARDS = len(ALL_CARDS)
+NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
 
 HAND_SIZE = 10
 
