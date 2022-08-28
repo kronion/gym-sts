@@ -12,8 +12,9 @@ from docker.models.containers import Container
 
 from gym_sts import constants
 from gym_sts.communication import Communicator
-from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS
-from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
+from gym_sts.spaces import actions
+from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
+from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation, ObservationCache
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -58,6 +59,8 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.action_space = ACTION_SPACE
         self.observation_space = OBSERVATION_SPACE
+
+        self.observation_cache = ObservationCache()
 
     @classmethod
     def build_image(cls) -> None:
@@ -118,10 +121,7 @@ class SlayTheSpireGymEnv(gym.Env):
             shutil.copytree(str(self.lib_dir), "tmp")
         except FileExistsError:
             pass
-        try:
-            shutil.copytree(str(self.mods_dir), "tmp/mods")
-        except FileExistsError:
-            pass
+        shutil.copytree(str(self.mods_dir), "tmp/mods", dirs_exist_ok=True)
         preferences = constants.PROJECT_ROOT / "build" / "preferences"
         shutil.copytree(str(preferences), "tmp/preferences", dirs_exist_ok=True)
 
@@ -223,8 +223,11 @@ class SlayTheSpireGymEnv(gym.Env):
             self.seed = random.getrandbits(64)
             self.prng = random.Random(self.seed)
 
+        self.observation_cache.reset()
+
         # TODO use prng to generate seed
-        obs = self.communicator.start("IRONCLAD", 0, 42)
+        obs = self.communicator.start("DEFECT", 0, 42)
+        self.observation_cache.append(obs)
 
         if return_info:
             return obs, {}
@@ -234,7 +237,45 @@ class SlayTheSpireGymEnv(gym.Env):
     def step(self, action_id: int) -> Tuple[Observation, float, bool, dict]:
         action = ACTIONS[action_id]
         obs = self.communicator._manual_command(action.to_command())
+        self.observation_cache.append(obs)
 
         reward = 1
 
         return obs, reward, obs.game_over, {"observation": obs}
+
+    def _valid_action(self, action: Action, observation: Observation) -> bool:
+        if isinstance(action, actions.EndTurn):
+            return observation.in_combat
+
+        # TODO when are return and proceed allowed? Seemingly most of the time.
+
+        if isinstance(action, actions.Choose):
+            if observation.in_combat:
+                # Choices correspond to playing cards
+                hand = observation.combat_state.hand
+                # Move the last slot to the front to account for CommunicationMod's
+                # odd indexing behavior.
+                cards = hand[:-1] + hand[:-1]
+                index = action.choice_index
+
+                if index >= len(hand):
+                    return False
+
+                card = cards[index]
+                return card.is_playable
+            else:
+                return True
+
+        return False
+
+    def valid_actions(self) -> list[Action]:
+        latest_obs = self.observation_cache.get()
+        if latest_obs is None:
+            raise RuntimeError("Game not started?")
+
+        valid_actions = []
+        for action in ACTIONS:
+            if self._valid_action(action, latest_obs):
+                valid_actions.append(action)
+
+        return valid_actions

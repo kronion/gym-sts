@@ -2,8 +2,23 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+from pydantic import BaseModel
 
 from gym_sts.spaces import constants
+
+
+class Card(BaseModel):
+    exhausts: bool
+    cost: int
+    name: str
+    id: str
+    ethereal: bool
+    upgrades: int
+    has_target: bool
+
+
+class HandCard(Card):
+    is_playable: bool
 
 
 def generate_card_space():
@@ -179,15 +194,15 @@ def to_binary_array(n: int, digits: int) -> list[int]:
     return array
 
 
-def _serialize_card(card: dict) -> int:
-    card_idx = constants.ALL_CARDS.index(card["id"]) * 2
-    if card["upgrades"] > 0:
+def _serialize_card(card: Card) -> int:
+    card_idx = constants.ALL_CARDS.index(card.id) * 2
+    if card.upgrades > 0:
         card_idx += 1
 
     return card_idx
 
 
-def _serialize_cards(cards: list) -> list[int]:
+def _serialize_cards(cards: list[Card]) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
     serialized = [0] * constants.NUM_CARDS_WITH_UPGRADES
     for card in cards:
@@ -261,7 +276,7 @@ class PersistentStateObs(ObsComponent):
             self.gold = game_state["gold"]
             self.potions = game_state["potions"]
             self.relics = game_state["relics"]
-            self.deck = game_state["deck"]
+            self.deck = [Card(**card) for card in game_state["deck"]]
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
@@ -325,10 +340,10 @@ class CombatStateObs(ObsComponent):
 
                 self.turn = combat_state["turn"]
 
-                self.hand = combat_state["hand"]
-                self.discard = combat_state["discard_pile"]
-                self.draw = combat_state["draw_pile"]
-                self.exhaust = combat_state["exhaust_pile"]
+                self.hand = [HandCard(**card) for card in combat_state["hand"]]
+                self.discard = [Card(**card) for card in combat_state["discard_pile"]]
+                self.draw = [Card(**card) for card in combat_state["draw_pile"]]
+                self.exhaust = [Card(**card) for card in combat_state["exhaust_pile"]]
 
                 self.enemies = combat_state["monsters"]
 
@@ -541,6 +556,14 @@ class Observation:
         return self.screen_type == "GAME_OVER"
 
     @property
+    def in_combat(self) -> bool:
+        self.check_for_error()
+        if "game_state" not in self.state:
+            return False
+
+        return "combat_state" in self.state["game_state"]
+
+    @property
     def in_game(self) -> bool:
         self.check_for_error()
         return self.state["in_game"]
@@ -568,3 +591,30 @@ class Observation:
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
         }
+
+
+class ObservationCache:
+    def __init__(self, size: int = 10):
+        self.size = size
+        self.index = 0
+        self.cache: list[Optional[Observation]] = [None] * self.size
+
+    def append(self, obs: Observation):
+        self.cache[self.index] = obs
+        self.index = (self.index + 1) % self.size
+
+    def get(self, ago: int = 0) -> Optional[Observation]:
+        """
+        Args:
+            ago: The number of observations back to retrieve (zero indexed).
+                The value must be less than the cache size.
+        """
+
+        if ago >= self.size:
+            raise ValueError(f"ago must be less than the cache size ({self.size})")
+
+        index = (self.index - ago - 1) % self.size
+        return self.cache[index]
+
+    def reset(self) -> None:
+        self.cache = [None] * self.size
