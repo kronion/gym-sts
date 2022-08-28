@@ -197,6 +197,9 @@ class SlayTheSpireGymEnv(gym.Env):
         # the send_state() call needs to be retried.
         assert obs.stable
 
+        # If the obs is different from the latest obs, write it to the cache
+        # self.observation_cache.append(obs)
+
         return obs
 
     def ready(self):
@@ -250,12 +253,13 @@ class SlayTheSpireGymEnv(gym.Env):
         # TODO when are return and proceed allowed? Seemingly most of the time.
 
         if isinstance(action, actions.Choose):
+            # TODO if in combat AND NOT making a card choice
             if observation.in_combat:
                 # Choices correspond to playing cards
                 hand = observation.combat_state.hand
                 # Move the last slot to the front to account for CommunicationMod's
                 # odd indexing behavior.
-                cards = hand[:-1] + hand[:-1]
+                cards = hand[-1:] + hand[:-1]
                 index = action.choice_index
 
                 if index >= len(hand):

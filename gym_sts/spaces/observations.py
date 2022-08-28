@@ -21,6 +21,10 @@ class HandCard(Card):
     is_playable: bool
 
 
+class ShopCard(Card):
+    price: int
+
+
 def generate_card_space():
     # Generally beyond some number of cards you don't actually care
     # how many cards you have
@@ -430,7 +434,7 @@ class ShopStateObs(ObsComponent):
                 and game_state["screen_type"] == "SHOP_SCREEN"
             ):
                 screen_state = game_state["screen_state"]
-                self.cards = screen_state["cards"]
+                self.cards = [ShopCard(**card) for card in screen_state["cards"]]
                 self.relics = screen_state["relics"]
                 self.potions = screen_state["potions"]
                 self.purge_available = screen_state["purge_available"]
@@ -446,7 +450,7 @@ class ShopStateObs(ObsComponent):
         for i, card in enumerate(self.cards):
             serialized = {
                 "card": _serialize_card(card),
-                "cost": to_binary_array(card["price"], constants.SHOP_LOG_MAX_COST),
+                "cost": to_binary_array(card.price, constants.SHOP_LOG_MAX_COST),
             }
             serialized_cards[i] = serialized
 
