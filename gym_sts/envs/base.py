@@ -269,41 +269,24 @@ class SlayTheSpireGymEnv(gym.Env):
 
     def _valid_action(self, action: Action, observation: Observation) -> bool:
         if isinstance(action, actions.EndTurn):
-            if observation.in_combat:
-                return observation.screen_type == "NONE"
-
-            return False
+            return "end" in observation._available_commands
 
         # TODO when are return and proceed allowed?
         elif isinstance(action, actions.Proceed):
-            if observation.in_combat:
-                if observation.screen_type == "HAND_SELECT":
-                    if observation.combat_state.can_pick_zero:
-                        return True
+            if "confirm" in observation._available_commands:
+                return True
 
-                    selects = observation.combat_state.hand_selects
-                    max_selects = observation.combat_state.max_selects
-                    if len(selects) == max_selects:
-                        return True
+            elif "proceed" in observation._available_commands:
+                return True
 
             return False
 
         elif isinstance(action, actions.Choose):
+            if "choose" not in observation._available_commands:
+                return False
+
             if observation.in_combat:
-                if observation.screen_type == "NONE":
-                    # Choices correspond to playing cards
-                    hand = observation.combat_state.hand
-                    # Move the last slot to the front to account for CommunicationMod's
-                    # odd indexing behavior.
-                    cards = hand[-1:] + hand[:-1]
-                    index = action.choice_index
-
-                    if index >= len(hand):
-                        return False
-
-                    card = cards[index]
-                    return card.is_playable
-                elif observation.screen_type == "HAND_SELECT":
+                if observation.screen_type == "HAND_SELECT":
                     # If the maximum number of selection has been hit,
                     # no more choices are allowed
                     selects = observation.combat_state.hand_selects
@@ -316,9 +299,48 @@ class SlayTheSpireGymEnv(gym.Env):
                     index = action.choice_index
                     return index < len(hand)
                 else:
+                    # TODO determine if there are any other choices that could
+                    # be made mid-combat, such as picking from deck/discard/exhaust,
+                    # or scrying.
+                    print("NOT IMPLEMENTED")
                     return False
             else:
+                # TODO handle choices outside of combat, like events, shops, campfires
+                print("NOT IMPLEMENTED")
+                return True
+
+        elif isinstance(action, actions.PlayCard):
+            if "play" not in observation._available_commands:
                 return False
+
+            if observation.in_combat:
+                if observation.screen_type == "NONE":
+                    # Choices correspond to playing cards
+                    hand = observation.combat_state.hand
+                    index = action.card_position
+                    # Adjust to account for CommunicationMod's odd indexing scheme.
+                    index -= 1
+                    if index < 0:
+                        index += 10
+
+                    if index >= len(hand):
+                        return False
+
+                    card = hand[index]
+
+                    target_index = action.target_index
+                    if target_index is not None and not card.has_target:
+                        return False
+                    if target_index is None and card.has_target:
+                        return False
+
+                    enemies = observation.combat_state.enemies
+                    if target_index is not None and target_index >= len(enemies):
+                        return False
+
+                    return card.is_playable
+
+            return False
 
         return False
 
