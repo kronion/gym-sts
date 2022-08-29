@@ -337,6 +337,10 @@ class CombatStateObs(ObsComponent):
         self.effects = []
         self.orbs = []
 
+        self.hand_selects = []
+        self.max_selects = 0
+        self.can_pick_zero = False
+
         if "game_state" in state:
             game_state = state["game_state"]
             if "combat_state" in game_state:
@@ -356,6 +360,12 @@ class CombatStateObs(ObsComponent):
                 self.energy = player_state["energy"]
                 self.effects = player_state["powers"]
                 self.orbs = player_state["orbs"]
+
+                if game_state["screen_type"] == "HAND_SELECT":
+                    screen_state = game_state["screen_state"]
+                    self.hand_selects = screen_state["selected"]
+                    self.max_selects = screen_state["max_cards"]
+                    self.can_pick_zero = screen_state["can_pick_zero"]
 
     def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
         if enemy is not None:

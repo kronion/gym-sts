@@ -4,6 +4,7 @@ import pathlib
 import random
 import shutil
 import subprocess
+import time
 from typing import Optional, Tuple, Union
 
 import docker
@@ -188,17 +189,37 @@ class SlayTheSpireGymEnv(gym.Env):
             if not obs.in_game:
                 break
 
-    def observe(self) -> Observation:
-        # TODO need to return from a cached value, calling
-        # receive_game_state() gets the next message from the fifo
-        obs = self.communicator.state()
+    def observe(self, add_to_cache: bool = False) -> Observation:
+        """
+        Fetches the latest game state and returns its observation.
 
-        # TODO if this assertion ever fails, we should take it as an indication that
-        # the send_state() call needs to be retried.
-        assert obs.stable
+        This method _always_ communicates with the game. It does not return a cached
+        observation.
 
-        # If the obs is different from the latest obs, write it to the cache
-        # self.observation_cache.append(obs)
+        Args:
+            add_to_cache: By default, this method does not add the returned obervation
+                to the env's internal cache, since it may be a duplicate. Set
+                add_to_cache to True to override that behavior. Adding the result to the
+                cache can be useful to fix the behavior of methods like valid_actions()
+                in the event of desync.
+        """
+
+        stable = False
+
+        for i in range(100):
+            obs = self.communicator.state()
+
+            if obs.stable:
+                stable = True
+                break
+
+            time.sleep(0.05)
+
+        if not stable:
+            raise RuntimeError("Unable to retrieve a stable observation")
+
+        if add_to_cache:
+            self.observation_cache.append(obs)
 
         return obs
 
@@ -248,27 +269,56 @@ class SlayTheSpireGymEnv(gym.Env):
 
     def _valid_action(self, action: Action, observation: Observation) -> bool:
         if isinstance(action, actions.EndTurn):
-            return observation.in_combat
-
-        # TODO when are return and proceed allowed? Seemingly most of the time.
-
-        if isinstance(action, actions.Choose):
-            # TODO if in combat AND NOT making a card choice
             if observation.in_combat:
-                # Choices correspond to playing cards
-                hand = observation.combat_state.hand
-                # Move the last slot to the front to account for CommunicationMod's
-                # odd indexing behavior.
-                cards = hand[-1:] + hand[:-1]
-                index = action.choice_index
+                return observation.screen_type == "NONE"
 
-                if index >= len(hand):
+            return False
+
+        # TODO when are return and proceed allowed?
+        elif isinstance(action, actions.Proceed):
+            if observation.in_combat:
+                if observation.screen_type == "HAND_SELECT":
+                    if observation.combat_state.can_pick_zero:
+                        return True
+
+                    selects = observation.combat_state.hand_selects
+                    max_selects = observation.combat_state.max_selects
+                    if len(selects) == max_selects:
+                        return True
+
+            return False
+
+        elif isinstance(action, actions.Choose):
+            if observation.in_combat:
+                if observation.screen_type == "NONE":
+                    # Choices correspond to playing cards
+                    hand = observation.combat_state.hand
+                    # Move the last slot to the front to account for CommunicationMod's
+                    # odd indexing behavior.
+                    cards = hand[-1:] + hand[:-1]
+                    index = action.choice_index
+
+                    if index >= len(hand):
+                        return False
+
+                    card = cards[index]
+                    return card.is_playable
+                elif observation.screen_type == "HAND_SELECT":
+                    # If the maximum number of selection has been hit,
+                    # no more choices are allowed
+                    selects = observation.combat_state.hand_selects
+                    max_selects = observation.combat_state.max_selects
+                    if len(selects) == max_selects:
+                        return False
+
+                    # Choices correspond to selecting cards
+                    hand = observation.combat_state.hand
+                    index = action.choice_index
+                    return index < len(hand)
+                else:
                     return False
-
-                card = cards[index]
-                return card.is_playable
             else:
-                return True
+                return False
 
         return False
 
