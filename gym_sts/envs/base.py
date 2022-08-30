@@ -13,9 +13,10 @@ from docker.models.containers import Container
 
 from gym_sts import constants
 from gym_sts.communication import Communicator
-from gym_sts.spaces import actions
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation, ObservationCache
+
+from .utils import ActionValidators
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -267,83 +268,6 @@ class SlayTheSpireGymEnv(gym.Env):
 
         return obs, reward, obs.game_over, {"observation": obs}
 
-    def _valid_action(self, action: Action, observation: Observation) -> bool:
-        if isinstance(action, actions.EndTurn):
-            return "end" in observation._available_commands
-
-        # TODO when are return and proceed allowed?
-        elif isinstance(action, actions.Proceed):
-            if "confirm" in observation._available_commands:
-                return True
-
-            elif "proceed" in observation._available_commands:
-                return True
-
-            return False
-
-        elif isinstance(action, actions.Choose):
-            if "choose" not in observation._available_commands:
-                return False
-
-            if observation.in_combat:
-                if observation.screen_type == "HAND_SELECT":
-                    # If the maximum number of selection has been hit,
-                    # no more choices are allowed
-                    selects = observation.combat_state.hand_selects
-                    max_selects = observation.combat_state.max_selects
-                    if len(selects) == max_selects:
-                        return False
-
-                    # Choices correspond to selecting cards
-                    hand = observation.combat_state.hand
-                    index = action.choice_index
-                    return index < len(hand)
-                else:
-                    # TODO determine if there are any other choices that could
-                    # be made mid-combat, such as picking from deck/discard/exhaust,
-                    # or scrying.
-                    print("NOT IMPLEMENTED")
-                    return False
-            else:
-                # TODO handle choices outside of combat, like events, shops, campfires
-                print("NOT IMPLEMENTED")
-                return True
-
-        elif isinstance(action, actions.PlayCard):
-            if "play" not in observation._available_commands:
-                return False
-
-            if observation.in_combat:
-                if observation.screen_type == "NONE":
-                    # Choices correspond to playing cards
-                    hand = observation.combat_state.hand
-                    index = action.card_position
-                    # Adjust to account for CommunicationMod's odd indexing scheme.
-                    index -= 1
-                    if index < 0:
-                        index += 10
-
-                    if index >= len(hand):
-                        return False
-
-                    card = hand[index]
-
-                    target_index = action.target_index
-                    if target_index is not None and not card.has_target:
-                        return False
-                    if target_index is None and card.has_target:
-                        return False
-
-                    enemies = observation.combat_state.enemies
-                    if target_index is not None and target_index >= len(enemies):
-                        return False
-
-                    return card.is_playable
-
-            return False
-
-        return False
-
     def valid_actions(self) -> list[Action]:
         latest_obs = self.observation_cache.get()
         if latest_obs is None:
@@ -351,7 +275,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         valid_actions = []
         for action in ACTIONS:
-            if self._valid_action(action, latest_obs):
+            if ActionValidators.validate(action, latest_obs):
                 valid_actions.append(action)
 
         return valid_actions

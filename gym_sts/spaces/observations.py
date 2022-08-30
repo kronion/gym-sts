@@ -21,8 +21,24 @@ class HandCard(Card):
     is_playable: bool
 
 
-class ShopCard(Card):
+class ShopMixin(BaseModel):
     price: int
+
+
+class ShopCard(Card, ShopMixin):
+    pass
+
+
+class Potion(BaseModel):
+    requires_target: bool
+    can_use: bool
+    can_discard: bool
+    name: str
+    id: str
+
+
+class ShopPotion(Potion, ShopMixin):
+    pass
 
 
 def generate_card_space():
@@ -278,7 +294,7 @@ class PersistentStateObs(ObsComponent):
             self.hp = game_state["current_hp"]
             self.max_hp = game_state["max_hp"]
             self.gold = game_state["gold"]
-            self.potions = game_state["potions"]
+            self.potions = [Potion(**potion) for potion in game_state["potions"]]
             self.relics = game_state["relics"]
             self.deck = [Card(**card) for card in game_state["deck"]]
 
@@ -292,7 +308,7 @@ class PersistentStateObs(ObsComponent):
         potions = [0] * constants.NUM_POTION_SLOTS
 
         for i, potion in enumerate(self.potions):
-            potions[i] = constants.ALL_POTIONS.index(potion["id"])
+            potions[i] = constants.ALL_POTIONS.index(potion.id)
 
         _relics = [False] * constants.NUM_RELICS
         for relic in self.relics:
@@ -337,6 +353,7 @@ class CombatStateObs(ObsComponent):
         self.effects = []
         self.orbs = []
 
+        # TODO make selections part of observation space?
         self.hand_selects = []
         self.max_selects = 0
         self.can_pick_zero = False
@@ -446,7 +463,9 @@ class ShopStateObs(ObsComponent):
                 screen_state = game_state["screen_state"]
                 self.cards = [ShopCard(**card) for card in screen_state["cards"]]
                 self.relics = screen_state["relics"]
-                self.potions = screen_state["potions"]
+                self.potions = [
+                    ShopPotion(**potion) for potion in screen_state["potions"]
+                ]
                 self.purge_available = screen_state["purge_available"]
                 self.purge_cost = screen_state["purge_cost"]
 
@@ -485,8 +504,8 @@ class ShopStateObs(ObsComponent):
         ] * constants.SHOP_POTION_COUNT
         for i, potion in enumerate(self.potions):
             serialized = {
-                "potion": constants.ALL_POTIONS.index(potion["id"]),
-                "cost": to_binary_array(potion["price"], constants.SHOP_LOG_MAX_COST),
+                "potion": constants.ALL_POTIONS.index(potion.id),
+                "cost": to_binary_array(potion.price, constants.SHOP_LOG_MAX_COST),
             }
             serialized_potions[i] = serialized
 

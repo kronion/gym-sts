@@ -32,8 +32,11 @@ class PlayCard(Action):
         return f"PLAY {self.card_position} {target}"
 
 
-class UsePotion(Action):
+class PotionAction(Action):
     potion_index: int
+
+
+class UsePotion(PotionAction):
     target_index: Optional[int] = None
 
     def to_command(self):
@@ -41,9 +44,7 @@ class UsePotion(Action):
         return f"POTION USE {self.potion_index} {target}"
 
 
-class DiscardPotion(Action):
-    potion_index: int
-
+class DiscardPotion(PotionAction):
     def to_command(self):
         return f"POTION DISCARD {self.potion_index}"
 
