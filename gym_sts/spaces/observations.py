@@ -531,6 +531,7 @@ class CampfireStateObs(ObsComponent):
         self.toke = False
         self.dig = False
         self.recall = False
+        self.num_options = 0
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -540,18 +541,12 @@ class CampfireStateObs(ObsComponent):
                     return
 
                 rest_options = screen_state["rest_options"]
-                if "rest" in rest_options:
-                    self.rest = True
-                if "smith" in rest_options:
-                    self.smith = True
-                if "lift" in rest_options:
-                    self.lift = True
-                if "toke" in rest_options:
-                    self.toke = True
-                if "dig" in rest_options:
-                    self.dig = True
-                if "recall" in rest_options:
-                    self.recall = True
+                possible_options = ["rest", "smith", "lift", "toke", "dig", "recall"]
+
+                for option in possible_options:
+                    if option in rest_options:
+                        setattr(self, option, True)
+                        self.num_options += 1
 
     def serialize(self) -> dict:
         return {

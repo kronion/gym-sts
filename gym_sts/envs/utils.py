@@ -36,6 +36,12 @@ class ActionValidators:
         index = action.choice_index
         return index < len(hand)
 
+    @staticmethod
+    def _validate_campfire(action: actions.Choose, observation: Observation) -> bool:
+        campfire_state = observation.campfire_state
+        index = action.choice_index
+        return index < campfire_state.num_options
+
     @classmethod
     def validate_choose(cls, action: actions.Choose, observation: Observation) -> bool:
         if "choose" not in observation._available_commands:
@@ -50,8 +56,19 @@ class ActionValidators:
                 # or scrying.
                 print("NOT IMPLEMENTED")
                 return False
+        elif observation.screen_type == "REST":
+            return cls._validate_campfire(action, observation)
+        elif observation.screen_type == "COMBAT_REWARD":
+            print("NOT IMPLEMENTED")
+            return True
+        elif observation.screen_type == "CARD_REWARD":
+            print("NOT IMPLEMENTED")
+            return True
+        elif observation.screen_type == "SHOP":
+            print("NOT IMPLEMENTED")
+            return True
         else:
-            # TODO handle choices outside of combat, like events, shops, campfires
+            # TODO handle choices outside of combat, like events, map
             print("NOT IMPLEMENTED")
             return True
 
