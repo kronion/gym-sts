@@ -42,6 +42,31 @@ class ActionValidators:
         index = action.choice_index
         return index < campfire_state.num_options
 
+    @staticmethod
+    def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
+        index = action.choice_index
+        shop_state = observation.shop_state
+        gold = observation.persistent_state.gold
+
+        prices = []
+        if shop_state.purge_available:
+            prices.append(shop_state.purge_cost)
+
+        for card in shop_state.cards:
+            prices.append(card.price)
+
+        for relic in shop_state.relics:
+            prices.append(relic.price)
+
+        for potion in shop_state.potions:
+            prices.append(potion.price)
+
+        if index >= len(prices):
+            return False
+
+        price = prices[index]
+        return price <= gold
+
     @classmethod
     def validate_choose(cls, action: actions.Choose, observation: Observation) -> bool:
         if "choose" not in observation._available_commands:
@@ -64,9 +89,8 @@ class ActionValidators:
         elif observation.screen_type == "CARD_REWARD":
             print("NOT IMPLEMENTED")
             return True
-        elif observation.screen_type == "SHOP":
-            print("NOT IMPLEMENTED")
-            return True
+        elif observation.screen_type == "SHOP_SCREEN":
+            return cls._validate_shop(action, observation)
         else:
             # TODO handle choices outside of combat, like events, map
             print("NOT IMPLEMENTED")

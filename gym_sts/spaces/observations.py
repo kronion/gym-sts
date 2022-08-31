@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
 
 from gym_sts.spaces import constants
 
@@ -41,6 +41,16 @@ class ShopPotion(Potion, ShopMixin):
     pass
 
 
+class Relic(BaseModel):
+    name: str
+    id: str
+    counter: int
+
+
+class ShopRelic(Relic, ShopMixin):
+    pass
+
+
 def generate_card_space():
     # Generally beyond some number of cards you don't actually care
     # how many cards you have
@@ -74,6 +84,7 @@ def generate_persistent_space():
             "potions": MultiDiscrete(
                 [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
             ),
+            # TODO add counters and usages to relics
             "relics": MultiBinary(constants.NUM_RELICS),
             "deck": generate_card_space(),
             "keys": MultiBinary(constants.NUM_KEYS),
@@ -294,9 +305,9 @@ class PersistentStateObs(ObsComponent):
             self.hp = game_state["current_hp"]
             self.max_hp = game_state["max_hp"]
             self.gold = game_state["gold"]
-            self.potions = [Potion(**potion) for potion in game_state["potions"]]
-            self.relics = game_state["relics"]
-            self.deck = [Card(**card) for card in game_state["deck"]]
+            self.potions = parse_obj_as(list[Potion], game_state["potions"])
+            self.relics = parse_obj_as(list[Relic], game_state["relics"])
+            self.deck = parse_obj_as(list[Card], game_state["deck"])
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
@@ -312,7 +323,7 @@ class PersistentStateObs(ObsComponent):
 
         _relics = [False] * constants.NUM_RELICS
         for relic in self.relics:
-            _relics[constants.ALL_RELICS.index(relic["id"])] = True
+            _relics[constants.ALL_RELICS.index(relic.id)] = True
         relics = [int(relic) for relic in _relics]
 
         deck = _serialize_cards(self.deck)
@@ -461,11 +472,9 @@ class ShopStateObs(ObsComponent):
                 and game_state["screen_type"] == "SHOP_SCREEN"
             ):
                 screen_state = game_state["screen_state"]
-                self.cards = [ShopCard(**card) for card in screen_state["cards"]]
-                self.relics = screen_state["relics"]
-                self.potions = [
-                    ShopPotion(**potion) for potion in screen_state["potions"]
-                ]
+                self.cards = parse_obj_as(list[ShopCard], screen_state["cards"])
+                self.relics = parse_obj_as(list[ShopRelic], screen_state["relics"])
+                self.potions = parse_obj_as(list[ShopPotion], screen_state["potions"])
                 self.purge_available = screen_state["purge_available"]
                 self.purge_cost = screen_state["purge_cost"]
 
@@ -491,8 +500,8 @@ class ShopStateObs(ObsComponent):
         ] * constants.SHOP_RELIC_COUNT
         for i, relic in enumerate(self.relics):
             serialized = {
-                "relic": constants.ALL_RELICS.index(relic["id"]),
-                "cost": to_binary_array(relic["price"], constants.SHOP_LOG_MAX_COST),
+                "relic": constants.ALL_RELICS.index(relic.id),
+                "cost": to_binary_array(relic.price, constants.SHOP_LOG_MAX_COST),
             }
             serialized_relics[i] = serialized
 
