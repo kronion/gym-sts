@@ -50,7 +50,7 @@ class ActionValidators:
 
         prices = []
         if shop_state.purge_available:
-            prices.append(shop_state.purge_cost)
+            prices.append(shop_state.purge_price)
 
         for card in shop_state.cards:
             prices.append(card.price)

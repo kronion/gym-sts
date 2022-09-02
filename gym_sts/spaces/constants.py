@@ -1,3 +1,5 @@
+import math
+
 LOG_MAX_HP = 10
 LOG_MAX_GOLD = 12
 LOG_MAX_ENERGY = 4
@@ -447,6 +449,11 @@ ALL_CARDS = [
     "Wound",
     "Slimed",
 ]
+NUM_CARDS = len(ALL_CARDS)
+NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
+LOG_NUM_CARDS = math.ceil(math.log(NUM_CARDS, 2))
+LOG_NUM_CARDS_WITH_UPGRADES = LOG_NUM_CARDS + 1  # Use one more bit to indicate upgrade
+
 
 ALL_RELICS = [
     "NONE",  # Indicates the absence of a relic
@@ -1054,10 +1061,6 @@ NUM_ENEMIES = 6
 # I really don't know the number of monster types
 NUM_MONSTER_TYPES = len(ALL_MONSTER_TYPES)
 
-# I estimate at most 400 excluding upgrades
-NUM_CARDS = len(ALL_CARDS)
-NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
-
 HAND_SIZE = 10
 
 # There's no real limit in the game, but this value greatly impacts the size
@@ -1075,4 +1078,6 @@ NUM_KEYS = 3
 SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3
 SHOP_POTION_COUNT = 3
-SHOP_LOG_MAX_COST = 10
+SHOP_LOG_MAX_PRICE = 10
+
+REWARD_CARD_COUNT = 4  # Default of 3, +1 for Question Card
