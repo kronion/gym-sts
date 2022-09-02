@@ -325,8 +325,10 @@ class MapStateObs(ObsComponent):
             index = constants.NUM_MAP_NODES_PER_ROW * y + x
             symbol = node["symbol"]
 
-            if symbol == "E" and node["is_burning"]:
-                symbol = "B"
+            if symbol == "E":
+                # Depends on json field added in our CommunicationMod fork
+                if "is_burning" in node and node["is_burning"]:
+                    symbol = "B"
 
             node_type = constants.ALL_MAP_LOCATIONS.index(symbol)
             nodes[index] = node_type
