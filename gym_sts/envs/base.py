@@ -55,9 +55,11 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.ready()
 
-        # Set on first reset
+        # The seed used to initialize the env's prng, which is used to
+        # generate the seeds used by the game itself.
         self.seed: Optional[int] = None
         self.prng: Optional[random.Random] = None
+        self.sts_seed: Optional[str] = None  # The seed used by the game.
 
         self.action_space = ACTION_SPACE
         self.observation_space = OBSERVATION_SPACE
@@ -236,6 +238,20 @@ class SlayTheSpireGymEnv(gym.Env):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Union[Observation, Tuple[Observation, dict]]:
+        """
+        Args:
+            seed: An int used to initialize the env's PRNG. The PRNG is used to
+                generate new game seeds on subsequent resets, so you should only need
+                to provide this kwarg once.
+            return_info: Whether or not to return a dict of miscellaneous context, for
+                parity with step()'s return signature.
+            options: A dict of additional optional parameters, listed below:
+                sts_seed (str): A specific seed for the game to use, in the same format
+                    as you'd provide in the game's menu. Useful for (re)playing known
+                    scenarios. If this parameter is not provided, the env's PRNG will
+                    generate a game seed instead.
+        """
+
         self._end_game()
 
         if seed is not None:
@@ -251,14 +267,16 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_cache.reset()
 
         if options is not None and "sts_seed" in options:
-            sts_seed = options["sts_seed"]
+            sts_seed = SeedHelpers.validate_seed(options["sts_seed"])
         else:
             sts_seed = SeedHelpers.make_seed(self.prng)
+        self.sts_seed = sts_seed
+
         obs = self.communicator.start("DEFECT", 0, sts_seed)
         self.observation_cache.append(obs)
 
         if return_info:
-            return obs, {}
+            return obs, {"seed": self.seed, "sts_seed": self.sts_seed}
         else:
             return obs
 

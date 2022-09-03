@@ -202,19 +202,20 @@ class ActionValidators:
 
 
 class SeedHelpers:
-    @staticmethod
-    def make_seed_str(seed_long: int) -> str:
+    char_set = "0123456789ABCDEFGHIJKLMNPQRSTUVWXYZ"  # Note no O
+
+    @classmethod
+    def make_seed_str(cls, seed_long: int) -> str:
         """
         Based on code from com/megacrit/cardcrawl/helpers/SeedHelper.java
         """
 
-        character_set = "0123456789ABCDEFGHIJKLMNPQRSTUVWXYZ"  # Note no O
-        base = len(character_set)
+        base = len(cls.char_set)
 
         seed_str = ""
         while seed_long != 0:
             seed_long, remainder = divmod(seed_long, base)
-            char = character_set[remainder]
+            char = cls.char_set[remainder]
             seed_str = char + seed_str
 
         return seed_str
@@ -225,3 +226,16 @@ class SeedHelpers:
         seed_long = rng.randrange(unsigned_long)
 
         return cls.make_seed_str(seed_long)
+
+    @classmethod
+    def validate_seed(cls, seed: str) -> str:
+        """
+        Returns the seed if it's valid, raises a ValueError otherwise.
+        """
+
+        seed = seed.upper()
+        for char in seed:
+            if char not in cls.char_set:
+                raise ValueError(f"Seed contains illegal character '{char}'")
+
+        return seed
