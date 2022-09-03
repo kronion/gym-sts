@@ -8,15 +8,19 @@ import time
 from typing import Optional, Tuple, Union
 
 import docker
-import gym
 from docker.models.containers import Container
 
+import gym
 from gym_sts import constants
 from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation, ObservationCache
 
 from .utils import ActionValidators
+
+CONTAINER_OUTDIR = "/game/out"
+CONTAINER_LIBDIR = "/game/lib"
+CONTAINER_MODSDIR = "/game/mods"
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -106,9 +110,9 @@ class SlayTheSpireGymEnv(gym.Env):
             init=True,
             detach=True,
             volumes={
-                self.output_dir.resolve(): dict(bind="/game/out", mode="rw"),
-                self.lib_dir: dict(bind="/game/lib", mode="ro"),
-                self.mods_dir: dict(bind="/game/mods", mode="ro"),
+                self.output_dir.resolve(): dict(bind=CONTAINER_OUTDIR, mode="rw"),
+                self.lib_dir: dict(bind=CONTAINER_LIBDIR, mode="ro"),
+                self.mods_dir: dict(bind=CONTAINER_MODSDIR, mode="ro"),
             },
         )
         print(f"started docker container {self.container.name}")
@@ -267,6 +271,20 @@ class SlayTheSpireGymEnv(gym.Env):
         reward = 1
 
         return obs, reward, obs.game_over, {"observation": obs}
+
+    def screenshot(self, filename: str) -> None:
+        """
+        Take a screenshot of the current game. Only works with headless=True.
+        """
+        file_path = pathlib.Path(CONTAINER_OUTDIR) / filename
+        exit_code, output = self.container.exec_run(
+            cmd=["scrot", str(file_path)],
+            environment={"DISPLAY": ":99", "XAUTHORITY": "/tmp/sts.xauth"},
+        )
+        if exit_code != 0:
+            raise RuntimeError(
+                "Failed to take a screenshot. Output: " + output.decode("utf-8")
+            )
 
     def valid_actions(self) -> list[Action]:
         latest_obs = self.observation_cache.get()
