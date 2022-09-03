@@ -1,3 +1,5 @@
+import random
+
 from gym_sts.spaces import actions
 from gym_sts.spaces.observations import Observation
 
@@ -197,3 +199,29 @@ class ActionValidators:
             return cls.validate_play(action, observation)
 
         raise ValueError("Unrecognized action type")
+
+
+class SeedHelpers:
+    @staticmethod
+    def make_seed_str(seed_long: int) -> str:
+        """
+        Based on code from com/megacrit/cardcrawl/helpers/SeedHelper.java
+        """
+
+        character_set = "0123456789ABCDEFGHIJKLMNPQRSTUVWXYZ"  # Note no O
+        base = len(character_set)
+
+        seed_str = ""
+        while seed_long != 0:
+            seed_long, remainder = divmod(seed_long, base)
+            char = character_set[remainder]
+            seed_str = char + seed_str
+
+        return seed_str
+
+    @classmethod
+    def make_seed(cls, rng: random.Random) -> str:
+        unsigned_long = 2**64
+        seed_long = rng.randrange(unsigned_long)
+
+        return cls.make_seed_str(seed_long)

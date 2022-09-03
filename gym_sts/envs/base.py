@@ -16,7 +16,7 @@ from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation, ObservationCache
 
-from .utils import ActionValidators
+from .utils import ActionValidators, SeedHelpers
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -250,8 +250,11 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.observation_cache.reset()
 
-        # TODO use prng to generate seed
-        obs = self.communicator.start("DEFECT", 0, 42)
+        if options is not None and "sts_seed" in options:
+            sts_seed = options["sts_seed"]
+        else:
+            sts_seed = SeedHelpers.make_seed(self.prng)
+        obs = self.communicator.start("DEFECT", 0, sts_seed)
         self.observation_cache.append(obs)
 
         if return_info:
