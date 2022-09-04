@@ -1021,6 +1021,13 @@ ALL_REWARD_TYPES = [
 ]
 NUM_REWARD_TYPES = len(ALL_REWARD_TYPES)
 
+ALL_KEYS = [
+    "EMERALD",
+    "RUBY",
+    "SAPPHIRE",
+]
+NUM_KEYS = len(ALL_KEYS)
+
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 15
 
@@ -1053,8 +1060,6 @@ MAX_ORB_SLOTS = 10
 
 # Wiki seems to list 108 buffs and debuffs, I may have missed a few
 NUM_EFFECTS = len(ALL_EFFECTS)
-
-NUM_KEYS = 3
 
 SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3

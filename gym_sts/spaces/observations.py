@@ -580,10 +580,74 @@ class CampfireStateObs(ObsComponent):
         }
 
 
+class Reward(BaseModel, ABC):
+    @abstractmethod
+    def serialize(self) -> dict:
+        raise NotImplementedError("Unimplemented")
+
+    @staticmethod
+    def serialize_empty():
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("NONE"),
+            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class GoldReward(Reward):
+    value: int
+
+    def serialize(self) -> dict:
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("GOLD"),
+            "value": to_binary_array(self.value, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class PotionReward(Reward):
+    value: Potion
+
+    def serialize(self) -> dict:
+        potion_idx = constants.ALL_POTIONS.index(self.value.id)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("POTION"),
+            "value": to_binary_array(potion_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class RelicReward(Reward):
+    value: Relic
+
+    def serialize(self) -> dict:
+        relic_idx = constants.ALL_RELICS.index(self.value.id)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("RELIC"),
+            "value": to_binary_array(relic_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class CardReward(Reward):
+    def serialize(self) -> dict:
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("CARD"),
+            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class KeyReward(Reward):
+    value: str
+
+    def serialize(self) -> dict:
+        key_idx = constants.ALL_KEYS.index(self.value)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("KEY"),
+            "value": to_binary_array(key_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
 class CombatRewardState(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
-        self.rewards = []
+        self.rewards: list[Reward] = []
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -592,10 +656,36 @@ class CombatRewardState(ObsComponent):
                 and game_state["screen_type"] == "COMBAT_REWARD"
             ):
                 screen_state = game_state["screen_state"]
-                self.rewards = screen_state["rewards"]
+                self.rewards = [
+                    self._parse_reward(reward) for reward in screen_state["rewards"]
+                ]
+
+    @staticmethod
+    def _parse_reward(reward: dict):
+        reward_type = reward["reward_type"]
+
+        if reward_type == "GOLD":
+            return GoldReward(value=reward["gold"])
+        elif reward_type == "POTION":
+            potion = Potion(**reward["potion"])
+            return PotionReward(value=potion)
+        elif reward_type == "RELIC":
+            relic = Relic(**reward["relic"])
+            return RelicReward(value=relic)
+        elif reward_type == "CARD":
+            return CardReward()
+        elif reward_type in ["EMERALD_KEY", "SAPPHIRE_KEY"]:
+            # TODO is it important to encode the "link" info for the sapphire key?
+            key_type = reward_type.split("_")[0]
+            return KeyReward(value=key_type)
+        else:
+            raise ValueError(f"Unrecognized reward type {reward_type}")
 
     def serialize(self) -> list:
-        return []
+        serialized = [Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
+        for i, reward in enumerate(self.rewards):
+            serialized[i] = reward.serialize()
+        return serialized
 
 
 class Observation:
