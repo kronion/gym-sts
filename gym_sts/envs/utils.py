@@ -46,6 +46,16 @@ class ActionValidators:
         return index < campfire_state.num_options
 
     @staticmethod
+    def _validate_card_reward(action: actions.Choose, observation: Observation) -> bool:
+        cards = observation.card_reward_state.cards
+        num_choices = len(cards)
+        if observation.card_reward_state.singing_bowl:
+            num_choices += 1
+
+        index = action.choice_index
+        return index < num_choices
+
+    @staticmethod
     def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
         index = action.choice_index
         shop_state = observation.shop_state
@@ -90,12 +100,14 @@ class ActionValidators:
             print("NOT IMPLEMENTED")
             return True
         elif observation.screen_type == "CARD_REWARD":
-            print("NOT IMPLEMENTED")
-            return True
+            return cls._validate_card_reward(action, observation)
         elif observation.screen_type == "SHOP_SCREEN":
             return cls._validate_shop(action, observation)
+        elif observation.screen_type == "MAP":
+            print("NOT IMPLEMENTED")
+            return True
         else:
-            # TODO handle choices outside of combat, like events, map
+            # TODO handle choices outside of combat, like events
             print("NOT IMPLEMENTED")
             return True
 
