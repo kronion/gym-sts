@@ -649,16 +649,23 @@ class CombatRewardState(ObsComponent):
         # Sane defaults
         self.rewards: list[Reward] = []
 
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if (
-                "screen_type" in game_state
-                and game_state["screen_type"] == "COMBAT_REWARD"
-            ):
-                screen_state = game_state["screen_state"]
-                self.rewards = [
-                    self._parse_reward(reward) for reward in screen_state["rewards"]
-                ]
+        game_state = state.get("game_state")
+        if game_state is None:
+            return
+
+        screen_type = game_state.get("screen_type")
+        if screen_type is None:
+            return
+
+        screen_state = game_state["screen_state"]
+        if screen_type == "COMBAT_REWARD":
+            self.rewards = [
+                self._parse_reward(reward) for reward in screen_state["rewards"]
+            ]
+        elif screen_type == "BOSS_REWARD":
+            self.rewards = [
+                RelicReward(value=Relic(**relic)) for relic in screen_state["relics"]
+            ]
 
     @staticmethod
     def _parse_reward(reward: dict):
