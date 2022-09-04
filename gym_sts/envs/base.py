@@ -8,9 +8,9 @@ import time
 from typing import Optional, Tuple, Union
 
 import docker
+import gym
 from docker.models.containers import Container
 
-import gym
 from gym_sts import constants
 from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
