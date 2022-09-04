@@ -14,9 +14,9 @@ from docker.models.containers import Container
 from gym_sts import constants
 from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
-from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation, ObservationCache
+from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
-from .utils import ActionValidators, SeedHelpers
+from .utils import ActionValidators, ObservationCache, SeedHelpers
 
 
 class SlayTheSpireGymEnv(gym.Env):

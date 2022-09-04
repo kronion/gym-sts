@@ -628,30 +628,3 @@ class Observation:
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
         }
-
-
-class ObservationCache:
-    def __init__(self, size: int = 10):
-        self.size = size
-        self.index = 0
-        self.cache: list[Optional[Observation]] = [None] * self.size
-
-    def append(self, obs: Observation):
-        self.cache[self.index] = obs
-        self.index = (self.index + 1) % self.size
-
-    def get(self, ago: int = 0) -> Optional[Observation]:
-        """
-        Args:
-            ago: The number of observations back to retrieve (zero indexed).
-                The value must be less than the cache size.
-        """
-
-        if ago >= self.size:
-            raise ValueError(f"ago must be less than the cache size ({self.size})")
-
-        index = (self.index - ago - 1) % self.size
-        return self.cache[index]
-
-    def reset(self) -> None:
-        self.cache = [None] * self.size
