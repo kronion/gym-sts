@@ -9,7 +9,7 @@ class Sender:
     def send_ready(self) -> None:
         self._send_message("READY")
 
-    def send_start(self, player_class: str, ascension: int, seed: int) -> None:
+    def send_start(self, player_class: str, ascension: int, seed: str) -> None:
         self._send_message(f"START {player_class} {ascension} {seed}")
 
     def send_proceed(self) -> None:
