@@ -183,12 +183,24 @@ def generate_campfire_space():
     )
 
 
+def generate_combat_reward_space():
+    combat_reward_item = Dict(
+        {
+            "type": Discrete(constants.NUM_REWARD_TYPES),
+            # Could be an amount of gold, a relic ID, the color of a key, or a potion
+            "value": MultiBinary(constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+    )
+    return Tuple([combat_reward_item] * constants.MAX_NUM_REWARDS)
+
+
 OBSERVATION_SPACE = Dict(
     {
         "persistent_state": generate_persistent_space(),
         "combat_state": generate_combat_space(),
         "shop_state": generate_shop_space(),
         "campfire_state": generate_campfire_space(),
+        "combat_reward_space": generate_combat_reward_space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
         # TODO: Worry about random events
@@ -568,12 +580,31 @@ class CampfireStateObs(ObsComponent):
         }
 
 
+class CombatRewardState(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.rewards = []
+
+        if "game_state" in state:
+            game_state = state["game_state"]
+            if (
+                "screen_type" in game_state
+                and game_state["screen_type"] == "COMBAT_REWARD"
+            ):
+                screen_state = game_state["screen_state"]
+                self.rewards = screen_state["rewards"]
+
+    def serialize(self) -> list:
+        return []
+
+
 class Observation:
     def __init__(self, state: dict):
         self.persistent_state = PersistentStateObs(state)
         self.combat_state = CombatStateObs(state)
         self.shop_state = ShopStateObs(state)
         self.campfire_state = CampfireStateObs(state)
+        self.combat_reward_state = CombatRewardState(state)
 
         # Keep a reference to the raw CommunicationMod response
         self.state = state
@@ -627,6 +658,7 @@ class Observation:
             "combat_state": self.combat_state.serialize(),
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
+            "combat_reward_state": self.combat_reward_state.serialize(),
         }
 
 

@@ -1,3 +1,5 @@
+import math
+
 LOG_MAX_HP = 10
 LOG_MAX_GOLD = 12
 LOG_MAX_ENERGY = 4
@@ -1009,6 +1011,16 @@ ALL_EVENTS = [
     "FaceTrader",
 ]
 
+ALL_REWARD_TYPES = [
+    "NONE",  # An empty reward slot
+    "GOLD",
+    "POTION",
+    "RELIC",
+    "CARD",
+    "KEY",
+]
+NUM_REWARD_TYPES = len(ALL_REWARD_TYPES)
+
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 15
 
@@ -1048,3 +1060,15 @@ SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3
 SHOP_POTION_COUNT = 3
 SHOP_LOG_MAX_COST = 10
+
+# Boss gold reward max * golden idol bonus * buffer in case I'm wrong
+_COMBAT_REWARD_MAX_GOLD = int(105 * 1.25 * 1.25)
+_COMBAT_REWARD_MAX_POTION = NUM_POTIONS
+_COMBAT_REWARD_MAX_RELIC = NUM_RELICS
+_COMBAT_REWARD_MAX_ID = max(
+    _COMBAT_REWARD_MAX_GOLD, _COMBAT_REWARD_MAX_POTION, _COMBAT_REWARD_MAX_RELIC
+)
+COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
+
+# (Card + gold + potion + 2 relics (black star) + key) * buffer in case I'm wrong
+MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)
