@@ -187,7 +187,7 @@ def generate_combat_reward_space():
     combat_reward_item = Dict(
         {
             "type": Discrete(constants.NUM_REWARD_TYPES),
-            # Could be an amount of gold, a relic ID, the color of a key, or a potion
+            # Could be an amount of gold, a relic ID, the color of a key, or a potion ID
             "value": MultiBinary(constants.COMBAT_REWARD_LOG_MAX_ID),
         }
     )
@@ -681,7 +681,7 @@ class CombatRewardState(ObsComponent):
         else:
             raise ValueError(f"Unrecognized reward type {reward_type}")
 
-    def serialize(self) -> list:
+    def serialize(self) -> list[dict]:
         serialized = [Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
         for i, reward in enumerate(self.rewards):
             serialized[i] = reward.serialize()
