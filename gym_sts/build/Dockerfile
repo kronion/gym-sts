@@ -34,5 +34,5 @@ COPY communication_mod.config.properties config.properties
 WORKDIR /game
 COPY pipe_to_host.sh pipe_to_host.sh
 
-ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout"]
+ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-f", "/tmp/sts.xauth"]
 CMD ["java", "-jar", "/game/lib/ModTheSpire.jar", "--skip-intro", "--mods", "basemod,CommunicationMod"]
