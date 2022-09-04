@@ -46,6 +46,16 @@ class ActionValidators:
         return index < campfire_state.num_options
 
     @staticmethod
+    def _validate_combat_reward(
+        action: actions.Choose, observation: Observation
+    ) -> bool:
+        combat_reward_state = observation.combat_reward_state
+        index = action.choice_index
+        num_choices = len(combat_reward_state.rewards)
+
+        return index < num_choices
+
+    @staticmethod
     def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
         index = action.choice_index
         shop_state = observation.shop_state
@@ -87,8 +97,7 @@ class ActionValidators:
         elif observation.screen_type == "REST":
             return cls._validate_campfire(action, observation)
         elif observation.screen_type == "COMBAT_REWARD":
-            print("NOT IMPLEMENTED")
-            return True
+            return cls._validate_combat_reward(action, observation)
         elif observation.screen_type == "CARD_REWARD":
             print("NOT IMPLEMENTED")
             return True
