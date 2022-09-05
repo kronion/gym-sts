@@ -82,11 +82,7 @@ def generate_map_space():
             "nodes": MultiDiscrete(
                 [constants.NUM_MAP_LOCATIONS] * constants.NUM_MAP_NODES
             ),
-            "edges": MultiBinary(
-                constants.NUM_MAP_NODES_PER_ROW
-                * constants.NUM_MAP_EDGES_PER_NODE
-                * (constants.NUM_MAP_ROWS - 1)
-            ),
+            "edges": MultiBinary(constants.NUM_MAP_EDGES),
             "boss": Discrete(constants.NUM_NORMAL_BOSSES),
         }
     )
