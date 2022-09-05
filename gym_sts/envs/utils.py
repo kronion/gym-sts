@@ -46,6 +46,11 @@ class ActionValidators:
         return index < campfire_state.num_options
 
     @staticmethod
+    def _validate_room(action: actions.Choose, observation: Observation) -> bool:
+        # Only choice is to open the chest or enter the shop
+        return action.choice_index == 0
+
+    @staticmethod
     def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
         index = action.choice_index
         shop_state = observation.shop_state
@@ -92,6 +97,8 @@ class ActionValidators:
         elif observation.screen_type == "CARD_REWARD":
             print("NOT IMPLEMENTED")
             return True
+        elif observation.screen_type in ["SHOP_ROOM", "CHEST"]:
+            return cls._validate_room(action, observation)
         elif observation.screen_type == "SHOP_SCREEN":
             return cls._validate_shop(action, observation)
         else:
