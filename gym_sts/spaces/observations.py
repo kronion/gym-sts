@@ -76,6 +76,18 @@ def generate_health_space():
     )
 
 
+def generate_map_space():
+    return Dict(
+        {
+            "nodes": MultiDiscrete(
+                [constants.NUM_MAP_LOCATIONS] * constants.NUM_MAP_NODES
+            ),
+            "edges": MultiBinary(constants.NUM_MAP_EDGES),
+            "boss": Discrete(constants.NUM_NORMAL_BOSSES),
+        }
+    )
+
+
 def generate_persistent_space():
     return Dict(
         {
@@ -84,11 +96,11 @@ def generate_persistent_space():
             "potions": MultiDiscrete(
                 [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
             ),
-            # TODO add counters and usages to relics
+            # TODO add counters and usages (e.g. lizard tail) to relics
             "relics": MultiBinary(constants.NUM_RELICS),
             "deck": generate_card_space(),
             "keys": MultiBinary(constants.NUM_KEYS),
-            # TODO: Add map
+            "map": generate_map_space(),
         }
     )
 
@@ -301,6 +313,54 @@ def _serialize_orbs(orbs: list) -> list:
     return serialized
 
 
+class MapStateObs(ObsComponent):
+    def __init__(self, state: Optional[dict] = None):
+        self.nodes = []
+        self.boss = "NONE"
+
+        if state is not None:
+            game_state = state["game_state"]
+            self.nodes = game_state["map"]
+            self.boss = game_state["act_boss"]
+
+    def serialize(self) -> dict:
+        empty_node = constants.ALL_MAP_LOCATIONS.index("NONE")
+        nodes = [empty_node] * constants.NUM_MAP_NODES
+        edges = [0] * constants.NUM_MAP_EDGES
+
+        for node in self.nodes:
+            x, y = node["x"], node["y"]
+            index = constants.NUM_MAP_NODES_PER_ROW * y + x
+            symbol = node["symbol"]
+
+            if symbol == "E":
+                # Depends on json field added in our CommunicationMod fork
+                if "is_burning" in node and node["is_burning"]:
+                    symbol = "B"
+
+            node_type = constants.ALL_MAP_LOCATIONS.index(symbol)
+            nodes[index] = node_type
+
+            if y < constants.NUM_MAP_ROWS - 1:
+                edge_index = (
+                    constants.NUM_MAP_NODES_PER_ROW * y + x
+                ) * constants.NUM_MAP_EDGES_PER_NODE
+
+                child_x_coords = [child["x"] for child in node["children"]]
+
+                for coord in [x - 1, x, x + 1]:
+                    if coord in child_x_coords:
+                        edges[edge_index] = 1
+                    edge_index += 1
+
+        boss = constants.NORMAL_BOSSES.index(self.boss)
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "boss": boss,
+        }
+
+
 class PersistentStateObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
@@ -311,6 +371,7 @@ class PersistentStateObs(ObsComponent):
         self.relics = []
         self.deck = []
         self.keys = {}
+        self.map = MapStateObs()
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -320,6 +381,7 @@ class PersistentStateObs(ObsComponent):
             self.potions = parse_obj_as(list[Potion], game_state["potions"])
             self.relics = parse_obj_as(list[Relic], game_state["relics"])
             self.deck = parse_obj_as(list[Card], game_state["deck"])
+            self.map = MapStateObs(state)
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
@@ -353,7 +415,7 @@ class PersistentStateObs(ObsComponent):
             "relics": relics,
             "deck": deck,
             "keys": keys,
-            # TODO: Add map
+            "map": self.map.serialize(),
         }
 
         return response
