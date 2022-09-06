@@ -132,11 +132,7 @@ def generate_map_space():
             "nodes": MultiDiscrete(
                 [constants.NUM_MAP_LOCATIONS] * constants.NUM_MAP_NODES
             ),
-            "edges": MultiBinary(
-                constants.NUM_MAP_NODES_PER_ROW
-                * constants.NUM_MAP_EDGES_PER_NODE
-                * (constants.NUM_MAP_ROWS - 1)
-            ),
+            "edges": MultiBinary(constants.NUM_MAP_EDGES),
             "boss": Discrete(constants.NUM_NORMAL_BOSSES),
         }
     )
@@ -267,6 +263,17 @@ def generate_card_reward_space():
     )
 
 
+def generate_combat_reward_space():
+    combat_reward_item = Dict(
+        {
+            "type": Discrete(constants.NUM_REWARD_TYPES),
+            # Could be an amount of gold, a relic ID, the color of a key, or a potion ID
+            "value": MultiBinary(constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+    )
+    return Tuple([combat_reward_item] * constants.MAX_NUM_REWARDS)
+
+
 OBSERVATION_SPACE = Dict(
     {
         "persistent_state": generate_persistent_space(),
@@ -274,6 +281,7 @@ OBSERVATION_SPACE = Dict(
         "shop_state": generate_shop_space(),
         "campfire_state": generate_campfire_space(),
         "card_reward_state": generate_card_reward_space(),
+        "combat_reward_space": generate_combat_reward_space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
         # TODO: Worry about random events
@@ -386,8 +394,10 @@ class MapStateObs(ObsComponent):
             index = constants.NUM_MAP_NODES_PER_ROW * y + x
             symbol = node["symbol"]
 
-            if symbol == "E" and node["is_burning"]:
-                symbol = "B"
+            if symbol == "E":
+                # Depends on json field added in our CommunicationMod fork
+                if "is_burning" in node and node["is_burning"]:
+                    symbol = "B"
 
             node_type = constants.ALL_MAP_LOCATIONS.index(symbol)
             nodes[index] = node_type
@@ -715,6 +725,121 @@ class CardRewardStateObs(ObsComponent):
         }
 
 
+class Reward(BaseModel, ABC):
+    @abstractmethod
+    def serialize(self) -> dict:
+        raise NotImplementedError("Unimplemented")
+
+    @staticmethod
+    def serialize_empty():
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("NONE"),
+            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class GoldReward(Reward):
+    value: int
+
+    def serialize(self) -> dict:
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("GOLD"),
+            "value": to_binary_array(self.value, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class PotionReward(Reward):
+    value: Potion
+
+    def serialize(self) -> dict:
+        potion_idx = constants.ALL_POTIONS.index(self.value.id)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("POTION"),
+            "value": to_binary_array(potion_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class RelicReward(Reward):
+    value: Relic
+
+    def serialize(self) -> dict:
+        relic_idx = constants.ALL_RELICS.index(self.value.id)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("RELIC"),
+            "value": to_binary_array(relic_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class CardReward(Reward):
+    def serialize(self) -> dict:
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("CARD"),
+            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class KeyReward(Reward):
+    value: str
+
+    def serialize(self) -> dict:
+        key_idx = constants.ALL_KEYS.index(self.value)
+        return {
+            "type": constants.ALL_REWARD_TYPES.index("KEY"),
+            "value": to_binary_array(key_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
+        }
+
+
+class CombatRewardState(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.rewards: list[Reward] = []
+
+        game_state = state.get("game_state")
+        if game_state is None:
+            return
+
+        screen_type = game_state.get("screen_type")
+        if screen_type is None:
+            return
+
+        screen_state = game_state["screen_state"]
+        if screen_type == "COMBAT_REWARD":
+            self.rewards = [
+                self._parse_reward(reward) for reward in screen_state["rewards"]
+            ]
+        elif screen_type == "BOSS_REWARD":
+            self.rewards = [
+                RelicReward(value=Relic(**relic)) for relic in screen_state["relics"]
+            ]
+
+    @staticmethod
+    def _parse_reward(reward: dict):
+        reward_type = reward["reward_type"]
+
+        if reward_type == "GOLD":
+            return GoldReward(value=reward["gold"])
+        elif reward_type == "POTION":
+            potion = Potion(**reward["potion"])
+            return PotionReward(value=potion)
+        elif reward_type == "RELIC":
+            relic = Relic(**reward["relic"])
+            return RelicReward(value=relic)
+        elif reward_type == "CARD":
+            return CardReward()
+        elif reward_type in ["EMERALD_KEY", "SAPPHIRE_KEY"]:
+            # TODO is it important to encode the "link" info for the sapphire key?
+            key_type = reward_type.split("_")[0]
+            return KeyReward(value=key_type)
+        else:
+            raise ValueError(f"Unrecognized reward type {reward_type}")
+
+    def serialize(self) -> list[dict]:
+        serialized = [Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
+        for i, reward in enumerate(self.rewards):
+            serialized[i] = reward.serialize()
+        return serialized
+
+
 class Observation:
     def __init__(self, state: dict):
         self.persistent_state = PersistentStateObs(state)
@@ -722,6 +847,7 @@ class Observation:
         self.shop_state = ShopStateObs(state)
         self.campfire_state = CampfireStateObs(state)
         self.card_reward_state = CardRewardStateObs(state)
+        self.combat_reward_state = CombatRewardState(state)
 
         # Keep a reference to the raw CommunicationMod response
         self.state = state
@@ -775,4 +901,5 @@ class Observation:
             "combat_state": self.combat_state.serialize(),
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
+            "combat_reward_state": self.combat_reward_state.serialize(),
         }

@@ -1019,6 +1019,8 @@ ALL_EVENTS = [
     "FaceTrader",
 ]
 
+# You can read more about the structure of the map here:
+# https://kosgames.com/slay-the-spire-map-generation-guide-26769/
 ALL_MAP_LOCATIONS = [
     "NONE",  # Indicates the absence of node
     "M",  # Monster
@@ -1033,6 +1035,9 @@ NUM_MAP_LOCATIONS = len(ALL_MAP_LOCATIONS)
 NUM_MAP_NODES_PER_ROW = 7
 NUM_MAP_ROWS = 15
 NUM_MAP_NODES = NUM_MAP_NODES_PER_ROW * NUM_MAP_ROWS
+# Nodes can only have edges to endpoints in the same column, or one column to the
+# left or right. Thus, we store three bits per node, representing the presence of an
+# edge to the left, center, and right.
 NUM_MAP_EDGES_PER_NODE = 3  # Max branching factor from one layer to the next
 NUM_MAP_EDGES = NUM_MAP_NODES_PER_ROW * NUM_MAP_EDGES_PER_NODE * (NUM_MAP_ROWS - 1)
 
@@ -1049,6 +1054,23 @@ NORMAL_BOSSES = [
     "Donu and Deca",
 ]
 NUM_NORMAL_BOSSES = len(NORMAL_BOSSES)
+
+ALL_REWARD_TYPES = [
+    "NONE",  # An empty reward slot
+    "GOLD",
+    "POTION",
+    "RELIC",
+    "CARD",
+    "KEY",
+]
+NUM_REWARD_TYPES = len(ALL_REWARD_TYPES)
+
+ALL_KEYS = [
+    "EMERALD",
+    "RUBY",
+    "SAPPHIRE",
+]
+NUM_KEYS = len(ALL_KEYS)
 
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 15
@@ -1073,11 +1095,21 @@ MAX_ORB_SLOTS = 10
 # Wiki seems to list 108 buffs and debuffs, I may have missed a few
 NUM_EFFECTS = len(ALL_EFFECTS)
 
-NUM_KEYS = 3
-
 SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3
 SHOP_POTION_COUNT = 3
 SHOP_LOG_MAX_PRICE = 10
 
 REWARD_CARD_COUNT = 4  # Default of 3, +1 for Question Card
+
+# Boss gold reward max * golden idol bonus * buffer in case I'm wrong
+_COMBAT_REWARD_MAX_GOLD = int(105 * 1.25 * 1.25)
+_COMBAT_REWARD_MAX_POTION = NUM_POTIONS
+_COMBAT_REWARD_MAX_RELIC = NUM_RELICS
+_COMBAT_REWARD_MAX_ID = max(
+    _COMBAT_REWARD_MAX_GOLD, _COMBAT_REWARD_MAX_POTION, _COMBAT_REWARD_MAX_RELIC
+)
+COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
+
+# (Card + gold + potion + 2 relics (black star) + key) * buffer in case I'm wrong
+MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)

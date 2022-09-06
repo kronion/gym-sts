@@ -56,6 +56,21 @@ class ActionValidators:
         return index < num_choices
 
     @staticmethod
+    def _validate_combat_reward(
+        action: actions.Choose, observation: Observation
+    ) -> bool:
+        combat_reward_state = observation.combat_reward_state
+        index = action.choice_index
+        num_choices = len(combat_reward_state.rewards)
+
+        return index < num_choices
+
+    @staticmethod
+    def _validate_room(action: actions.Choose, observation: Observation) -> bool:
+        # Only choice is to open the chest or enter the shop
+        return action.choice_index == 0
+
+    @staticmethod
     def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
         index = action.choice_index
         shop_state = observation.shop_state
@@ -97,10 +112,11 @@ class ActionValidators:
         elif observation.screen_type == "REST":
             return cls._validate_campfire(action, observation)
         elif observation.screen_type == "COMBAT_REWARD":
-            print("NOT IMPLEMENTED")
-            return True
+            return cls._validate_combat_reward(action, observation)
         elif observation.screen_type == "CARD_REWARD":
             return cls._validate_card_reward(action, observation)
+        elif observation.screen_type in ["SHOP_ROOM", "CHEST"]:
+            return cls._validate_room(action, observation)
         elif observation.screen_type == "SHOP_SCREEN":
             return cls._validate_shop(action, observation)
         elif observation.screen_type == "MAP":
