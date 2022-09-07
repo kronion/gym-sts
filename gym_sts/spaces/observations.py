@@ -778,6 +778,18 @@ class Observation:
         return self.state["available_commands"]
 
     @property
+    def choice_list(self) -> list[str]:
+        self.check_for_error()
+        if "choose" not in self._available_commands:
+            return []
+
+        game_state = self.state.get("game_state")
+        if game_state is None:
+            return []
+
+        return game_state.get("choice_list", [])
+
+    @property
     def game_over(self) -> bool:
         self.check_for_error()
         return self.screen_type == "GAME_OVER"

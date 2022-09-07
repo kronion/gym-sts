@@ -27,63 +27,8 @@ class ActionValidators:
         return False
 
     @staticmethod
-    def _validate_hand_select(action: actions.Choose, observation: Observation) -> bool:
-        # If the maximum number of selection has been hit, no more choices are allowed.
-        selects = observation.combat_state.hand_selects
-        max_selects = observation.combat_state.max_selects
-        if len(selects) == max_selects:
-            return False
-
-        # Choices correspond to selecting cards
-        hand = observation.combat_state.hand
-        index = action.choice_index
-        return index < len(hand)
-
-    @staticmethod
-    def _validate_campfire(action: actions.Choose, observation: Observation) -> bool:
-        campfire_state = observation.campfire_state
-        index = action.choice_index
-        return index < campfire_state.num_options
-
-    @staticmethod
-    def _validate_combat_reward(
-        action: actions.Choose, observation: Observation
-    ) -> bool:
-        combat_reward_state = observation.combat_reward_state
-        index = action.choice_index
-        num_choices = len(combat_reward_state.rewards)
-
-        return index < num_choices
-
-    @staticmethod
-    def _validate_room(action: actions.Choose, observation: Observation) -> bool:
-        # Only choice is to open the chest or enter the shop
-        return action.choice_index == 0
-
-    @staticmethod
-    def _validate_shop(action: actions.Choose, observation: Observation) -> bool:
-        index = action.choice_index
-        shop_state = observation.shop_state
-        gold = observation.persistent_state.gold
-
-        prices = []
-        if shop_state.purge_available:
-            prices.append(shop_state.purge_cost)
-
-        for card in shop_state.cards:
-            prices.append(card.price)
-
-        for relic in shop_state.relics:
-            prices.append(relic.price)
-
-        for potion in shop_state.potions:
-            prices.append(potion.price)
-
-        if index >= len(prices):
-            return False
-
-        price = prices[index]
-        return price <= gold
+    def _validate_choice(action: actions.Choose, observation: Observation) -> bool:
+        return action.choice_index < len(observation.choice_list)
 
     @classmethod
     def validate_choose(cls, action: actions.Choose, observation: Observation) -> bool:
@@ -92,26 +37,27 @@ class ActionValidators:
 
         if observation.in_combat:
             if observation.screen_type == "HAND_SELECT":
-                return cls._validate_hand_select(action, observation)
+                return cls._validate_choice(action, observation)
             else:
                 # TODO determine if there are any other choices that could
                 # be made mid-combat, such as picking from deck/discard/exhaust,
                 # or scrying.
                 print("NOT IMPLEMENTED")
                 return False
-        elif observation.screen_type == "REST":
-            return cls._validate_campfire(action, observation)
-        elif observation.screen_type == "COMBAT_REWARD":
-            return cls._validate_combat_reward(action, observation)
+        elif observation.screen_type in [
+            "CHEST",
+            "COMBAT_REWARD",
+            "MAP",
+            "REST",
+            "SHOP_ROOM",
+            "SHOP_SCREEN",
+        ]:
+            return cls._validate_choice(action, observation)
         elif observation.screen_type == "CARD_REWARD":
             print("NOT IMPLEMENTED")
             return True
-        elif observation.screen_type in ["SHOP_ROOM", "CHEST"]:
-            return cls._validate_room(action, observation)
-        elif observation.screen_type == "SHOP_SCREEN":
-            return cls._validate_shop(action, observation)
         else:
-            # TODO handle choices outside of combat, like events, map
+            # TODO handle choices outside of combat, like events
             print("NOT IMPLEMENTED")
             return True
 
