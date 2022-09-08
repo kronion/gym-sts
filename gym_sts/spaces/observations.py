@@ -16,6 +16,33 @@ class Card(BaseModel):
     upgrades: int
     has_target: bool
 
+    @staticmethod
+    def _serialize_binary(card_idx: int, upgrades: int) -> list[int]:
+        array = to_binary_array(card_idx, constants.LOG_NUM_CARDS)
+
+        upgrade_bit = [0]
+        if upgrades > 0:
+            upgrade_bit = [1]
+
+        array = upgrade_bit + array
+
+        return array
+
+    @classmethod
+    def serialize_empty_binary(cls) -> list[int]:
+        return cls._serialize_binary(0, 0)
+
+    def serialize_discrete(self) -> int:
+        card_idx = constants.ALL_CARDS.index(self.id) * 2
+        if self.upgrades > 0:
+            card_idx += 1
+
+        return card_idx
+
+    def serialize_binary(self) -> list[int]:
+        card_idx = constants.ALL_CARDS.index(self.id)
+        return self._serialize_binary(card_idx, self.upgrades)
+
 
 class HandCard(Card):
     is_playable: bool
@@ -26,7 +53,30 @@ class ShopMixin(BaseModel):
 
 
 class ShopCard(Card, ShopMixin):
-    pass
+    def serialize_discrete(self):
+        raise NotImplementedError("Use serialize() instead")
+
+    def serialize_binary(self):
+        raise NotImplementedError("Use serialize() instead")
+
+    @classmethod
+    def serialize_empty(cls) -> dict[str, list[int]]:
+        card_array = Card.serialize_empty_binary()
+        price_array = to_binary_array(0, constants.SHOP_LOG_MAX_PRICE)
+
+        return {
+            "card": card_array,
+            "price": price_array,
+        }
+
+    def serialize(self) -> dict[str, list[int]]:
+        card_array = super().serialize_binary()
+        price_array = to_binary_array(self.price, constants.SHOP_LOG_MAX_PRICE)
+
+        return {
+            "card": card_array,
+            "price": price_array,
+        }
 
 
 class Potion(BaseModel):
@@ -143,8 +193,8 @@ def generate_shop_space():
                 [
                     Dict(
                         {
-                            "card": Discrete(constants.NUM_CARDS_WITH_UPGRADES),
-                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                            "card": MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                            "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
                         }
                     )
                 ]
@@ -155,7 +205,7 @@ def generate_shop_space():
                     Dict(
                         {
                             "relic": Discrete(constants.NUM_RELICS),
-                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                            "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
                         }
                     )
                 ]
@@ -166,7 +216,7 @@ def generate_shop_space():
                     Dict(
                         {
                             "potion": Discrete(constants.NUM_POTIONS),
-                            "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                            "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
                         }
                     )
                 ]
@@ -175,7 +225,7 @@ def generate_shop_space():
             "purge": Dict(
                 {
                     "available": Discrete(2),
-                    "cost": MultiBinary([constants.SHOP_LOG_MAX_COST]),
+                    "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
                 }
             ),
         }
@@ -191,6 +241,24 @@ def generate_campfire_space():
             "toke": Discrete(2),
             "dig": Discrete(2),
             "recall": Discrete(2),
+        }
+    )
+
+
+def generate_card_reward_space():
+    return Dict(
+        {
+            # At most 4 cards may be offered (due to Question Card relic).
+            "cards": Tuple(
+                (
+                    MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                    MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                    MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                    MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                )
+            ),
+            "singing_bowl": Discrete(2),
+            "skippable": Discrete(2),
         }
     )
 
@@ -212,6 +280,7 @@ OBSERVATION_SPACE = Dict(
         "combat_state": generate_combat_space(),
         "shop_state": generate_shop_space(),
         "campfire_state": generate_campfire_space(),
+        "card_reward_state": generate_card_reward_space(),
         "combat_reward_space": generate_combat_reward_space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
@@ -249,19 +318,11 @@ def to_binary_array(n: int, digits: int) -> list[int]:
     return array
 
 
-def _serialize_card(card: Card) -> int:
-    card_idx = constants.ALL_CARDS.index(card.id) * 2
-    if card.upgrades > 0:
-        card_idx += 1
-
-    return card_idx
-
-
 def _serialize_cards(cards: list[Card]) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
     serialized = [0] * constants.NUM_CARDS_WITH_UPGRADES
     for card in cards:
-        card_idx = _serialize_card(card)
+        card_idx = card.serialize_discrete()
 
         if serialized[card_idx] < constants.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1
@@ -496,7 +557,7 @@ class CombatStateObs(ObsComponent):
 
         hand = [0] * constants.HAND_SIZE
         for i, card in enumerate(self.hand):
-            card_idx = _serialize_card(card)
+            card_idx = card.serialize_discrete()
             hand[i] = card_idx
 
         effects = _serialize_effects(self.effects)
@@ -537,7 +598,7 @@ class ShopStateObs(ObsComponent):
         self.relics = []
         self.potions = []
         self.purge_available = False
-        self.purge_cost = 0
+        self.purge_price = 0
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -550,51 +611,42 @@ class ShopStateObs(ObsComponent):
                 self.relics = parse_obj_as(list[ShopRelic], screen_state["relics"])
                 self.potions = parse_obj_as(list[ShopPotion], screen_state["potions"])
                 self.purge_available = screen_state["purge_available"]
-                self.purge_cost = screen_state["purge_cost"]
+                self.purge_price = screen_state["purge_cost"]
 
     def serialize(self) -> dict:
-        serialized_cards = [
-            {
-                "card": 0,
-                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
-            }
-        ] * constants.SHOP_CARD_COUNT
+        serialized_cards = [ShopCard.serialize_empty()] * constants.SHOP_CARD_COUNT
         for i, card in enumerate(self.cards):
-            serialized = {
-                "card": _serialize_card(card),
-                "cost": to_binary_array(card.price, constants.SHOP_LOG_MAX_COST),
-            }
-            serialized_cards[i] = serialized
+            serialized_cards[i] = card.serialize()
 
         serialized_relics = [
             {
                 "relic": 0,
-                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
+                "price": to_binary_array(0, constants.SHOP_LOG_MAX_PRICE),
             }
         ] * constants.SHOP_RELIC_COUNT
         for i, relic in enumerate(self.relics):
             serialized = {
                 "relic": constants.ALL_RELICS.index(relic.id),
-                "cost": to_binary_array(relic.price, constants.SHOP_LOG_MAX_COST),
+                "price": to_binary_array(relic.price, constants.SHOP_LOG_MAX_PRICE),
             }
             serialized_relics[i] = serialized
 
         serialized_potions = [
             {
                 "potion": 0,
-                "cost": to_binary_array(0, constants.SHOP_LOG_MAX_COST),
+                "price": to_binary_array(0, constants.SHOP_LOG_MAX_PRICE),
             }
         ] * constants.SHOP_POTION_COUNT
         for i, potion in enumerate(self.potions):
             serialized = {
                 "potion": constants.ALL_POTIONS.index(potion.id),
-                "cost": to_binary_array(potion.price, constants.SHOP_LOG_MAX_COST),
+                "price": to_binary_array(potion.price, constants.SHOP_LOG_MAX_PRICE),
             }
             serialized_potions[i] = serialized
 
         serialized_purge = {
             "available": int(self.purge_available),
-            "price": to_binary_array(self.purge_cost, constants.SHOP_LOG_MAX_COST),
+            "price": to_binary_array(self.purge_price, constants.SHOP_LOG_MAX_PRICE),
         }
 
         return {
@@ -639,6 +691,37 @@ class CampfireStateObs(ObsComponent):
             "toke": int(self.toke),
             "dig": int(self.dig),
             "recall": int(self.recall),
+        }
+
+
+class CardRewardStateObs(ObsComponent):
+    def __init__(self, state: dict):
+        # Sane defaults
+        self.cards = []
+        self.singing_bowl = False
+        self.skippable = False
+
+        if "game_state" in state:
+            game_state = state["game_state"]
+            if (
+                "screen_type" in game_state
+                and game_state["screen_type"] == "CARD_REWARD"
+            ):
+
+                screen_state = game_state["screen_state"]
+                self.cards = parse_obj_as(list[Card], screen_state["cards"])
+                self.singing_bowl = screen_state["bowl_available"]
+                self.skippable = screen_state["skip_available"]
+
+    def serialize(self) -> dict:
+        serialized_cards = [Card.serialize_empty_binary()] * constants.REWARD_CARD_COUNT
+        for i, card in enumerate(self.cards):
+            serialized_cards[i] = card.serialize_binary()
+
+        return {
+            "cards": serialized_cards,
+            "singing_bowl": int(self.singing_bowl),
+            "skippable": int(self.skippable),
         }
 
 
@@ -763,6 +846,7 @@ class Observation:
         self.combat_state = CombatStateObs(state)
         self.shop_state = ShopStateObs(state)
         self.campfire_state = CampfireStateObs(state)
+        self.card_reward_state = CardRewardStateObs(state)
         self.combat_reward_state = CombatRewardState(state)
 
         # Keep a reference to the raw CommunicationMod response
