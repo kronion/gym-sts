@@ -45,6 +45,7 @@ class ActionValidators:
                 print("NOT IMPLEMENTED")
                 return False
         elif observation.screen_type in [
+            "CARD_REWARD",
             "CHEST",
             "COMBAT_REWARD",
             "MAP",
@@ -53,9 +54,6 @@ class ActionValidators:
             "SHOP_SCREEN",
         ]:
             return cls._validate_choice(action, observation)
-        elif observation.screen_type == "CARD_REWARD":
-            print("NOT IMPLEMENTED")
-            return True
         else:
             # TODO handle choices outside of combat, like events
             print("NOT IMPLEMENTED")
