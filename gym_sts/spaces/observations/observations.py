@@ -2,53 +2,12 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
-from pydantic import BaseModel, parse_obj_as
+from pydantic import parse_obj_as
 
 from gym_sts.spaces import constants
 
-
-class Card(BaseModel):
-    exhausts: bool
-    cost: int
-    name: str
-    id: str
-    ethereal: bool
-    upgrades: int
-    has_target: bool
-
-
-class HandCard(Card):
-    is_playable: bool
-
-
-class ShopMixin(BaseModel):
-    price: int
-
-
-class ShopCard(Card, ShopMixin):
-    pass
-
-
-class Potion(BaseModel):
-    requires_target: bool
-    can_use: bool
-    can_discard: bool
-    name: str
-    id: str
-
-
-class ShopPotion(Potion, ShopMixin):
-    pass
-
-
-class Relic(BaseModel):
-    name: str
-    id: str
-    counter: int
-
-
-class ShopRelic(Relic, ShopMixin):
-    pass
+from . import types
+from .utils import to_binary_array
 
 
 def generate_card_space():
@@ -218,26 +177,7 @@ class ObsComponent(ABC):
         raise RuntimeError("Not implemented")
 
 
-def to_binary_array(n: int, digits: int) -> list[int]:
-    array = [0] * digits
-
-    idx = 0
-    n_copy = n
-    while n_copy > 0:
-        if idx >= digits:
-            raise ValueError(
-                f"{n} is too large to represent with {digits} binary digits"
-            )
-
-        n_copy, r = divmod(n_copy, 2)
-        if r > 0:
-            array[idx] = 1
-        idx += 1
-
-    return array
-
-
-def _serialize_card(card: Card) -> int:
+def _serialize_card(card: types.Card) -> int:
     card_idx = constants.ALL_CARDS.index(card.id) * 2
     if card.upgrades > 0:
         card_idx += 1
@@ -245,7 +185,7 @@ def _serialize_card(card: Card) -> int:
     return card_idx
 
 
-def _serialize_cards(cards: list[Card]) -> list[int]:
+def _serialize_cards(cards: list[types.Card]) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
     serialized = [0] * constants.NUM_CARDS_WITH_UPGRADES
     for card in cards:
@@ -317,9 +257,9 @@ class PersistentStateObs(ObsComponent):
             self.hp = game_state["current_hp"]
             self.max_hp = game_state["max_hp"]
             self.gold = game_state["gold"]
-            self.potions = parse_obj_as(list[Potion], game_state["potions"])
-            self.relics = parse_obj_as(list[Relic], game_state["relics"])
-            self.deck = parse_obj_as(list[Card], game_state["deck"])
+            self.potions = parse_obj_as(list[types.Potion], game_state["potions"])
+            self.relics = parse_obj_as(list[types.Relic], game_state["relics"])
+            self.deck = parse_obj_as(list[types.Card], game_state["deck"])
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
@@ -388,10 +328,14 @@ class CombatStateObs(ObsComponent):
 
                 self.turn = combat_state["turn"]
 
-                self.hand = [HandCard(**card) for card in combat_state["hand"]]
-                self.discard = [Card(**card) for card in combat_state["discard_pile"]]
-                self.draw = [Card(**card) for card in combat_state["draw_pile"]]
-                self.exhaust = [Card(**card) for card in combat_state["exhaust_pile"]]
+                self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
+                self.discard = [
+                    types.Card(**card) for card in combat_state["discard_pile"]
+                ]
+                self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
+                self.exhaust = [
+                    types.Card(**card) for card in combat_state["exhaust_pile"]
+                ]
 
                 self.enemies = combat_state["monsters"]
 
@@ -484,9 +428,13 @@ class ShopStateObs(ObsComponent):
                 and game_state["screen_type"] == "SHOP_SCREEN"
             ):
                 screen_state = game_state["screen_state"]
-                self.cards = parse_obj_as(list[ShopCard], screen_state["cards"])
-                self.relics = parse_obj_as(list[ShopRelic], screen_state["relics"])
-                self.potions = parse_obj_as(list[ShopPotion], screen_state["potions"])
+                self.cards = parse_obj_as(list[types.ShopCard], screen_state["cards"])
+                self.relics = parse_obj_as(
+                    list[types.ShopRelic], screen_state["relics"]
+                )
+                self.potions = parse_obj_as(
+                    list[types.ShopPotion], screen_state["potions"]
+                )
                 self.purge_available = screen_state["purge_available"]
                 self.purge_cost = screen_state["purge_cost"]
 
@@ -580,74 +528,10 @@ class CampfireStateObs(ObsComponent):
         }
 
 
-class Reward(BaseModel, ABC):
-    @abstractmethod
-    def serialize(self) -> dict:
-        raise NotImplementedError("Unimplemented")
-
-    @staticmethod
-    def serialize_empty():
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("NONE"),
-            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
-class GoldReward(Reward):
-    value: int
-
-    def serialize(self) -> dict:
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("GOLD"),
-            "value": to_binary_array(self.value, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
-class PotionReward(Reward):
-    value: Potion
-
-    def serialize(self) -> dict:
-        potion_idx = constants.ALL_POTIONS.index(self.value.id)
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("POTION"),
-            "value": to_binary_array(potion_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
-class RelicReward(Reward):
-    value: Relic
-
-    def serialize(self) -> dict:
-        relic_idx = constants.ALL_RELICS.index(self.value.id)
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("RELIC"),
-            "value": to_binary_array(relic_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
-class CardReward(Reward):
-    def serialize(self) -> dict:
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("CARD"),
-            "value": to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
-class KeyReward(Reward):
-    value: str
-
-    def serialize(self) -> dict:
-        key_idx = constants.ALL_KEYS.index(self.value)
-        return {
-            "type": constants.ALL_REWARD_TYPES.index("KEY"),
-            "value": to_binary_array(key_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
-        }
-
-
 class CombatRewardState(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
-        self.rewards: list[Reward] = []
+        self.rewards: list[types.Reward] = []
 
         game_state = state.get("game_state")
         if game_state is None:
@@ -664,7 +548,8 @@ class CombatRewardState(ObsComponent):
             ]
         elif screen_type == "BOSS_REWARD":
             self.rewards = [
-                RelicReward(value=Relic(**relic)) for relic in screen_state["relics"]
+                types.RelicReward(value=types.Relic(**relic))
+                for relic in screen_state["relics"]
             ]
 
     @staticmethod
@@ -672,24 +557,24 @@ class CombatRewardState(ObsComponent):
         reward_type = reward["reward_type"]
 
         if reward_type == "GOLD":
-            return GoldReward(value=reward["gold"])
+            return types.GoldReward(value=reward["gold"])
         elif reward_type == "POTION":
-            potion = Potion(**reward["potion"])
-            return PotionReward(value=potion)
+            potion = types.Potion(**reward["potion"])
+            return types.PotionReward(value=potion)
         elif reward_type == "RELIC":
-            relic = Relic(**reward["relic"])
-            return RelicReward(value=relic)
+            relic = types.Relic(**reward["relic"])
+            return types.RelicReward(value=relic)
         elif reward_type == "CARD":
-            return CardReward()
+            return types.CardReward()
         elif reward_type in ["EMERALD_KEY", "SAPPHIRE_KEY"]:
             # TODO is it important to encode the "link" info for the sapphire key?
             key_type = reward_type.split("_")[0]
-            return KeyReward(value=key_type)
+            return types.KeyReward(value=key_type)
         else:
             raise ValueError(f"Unrecognized reward type {reward_type}")
 
     def serialize(self) -> list[dict]:
-        serialized = [Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
+        serialized = [types.Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
         for i, reward in enumerate(self.rewards):
             serialized[i] = reward.serialize()
         return serialized
