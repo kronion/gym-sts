@@ -87,8 +87,13 @@ class ActionValidators:
             return False
 
         enemies = observation.combat_state.enemies
-        if target_index is not None and target_index >= len(enemies):
-            return False
+        if target_index is not None:
+            if target_index >= len(enemies):
+                return False
+
+            enemy = enemies[target_index]
+            if enemy["is_gone"]:
+                return False
 
         return card.is_playable
 
