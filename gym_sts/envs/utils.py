@@ -48,6 +48,7 @@ class ActionValidators:
             "CARD_REWARD",
             "CHEST",
             "COMBAT_REWARD",
+            "GRID",
             "MAP",
             "REST",
             "SHOP_ROOM",
