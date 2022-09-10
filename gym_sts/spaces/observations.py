@@ -816,7 +816,7 @@ class CombatRewardState(ObsComponent):
     def _parse_reward(reward: dict):
         reward_type = reward["reward_type"]
 
-        if reward_type == "GOLD":
+        if reward_type in ["GOLD", "STOLEN_GOLD"]:
             return GoldReward(value=reward["gold"])
         elif reward_type == "POTION":
             potion = Potion(**reward["potion"])
