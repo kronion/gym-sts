@@ -1,10 +1,11 @@
+from gym.spaces import Dict, MultiBinary, MultiDiscrete
 from pydantic import parse_obj_as
 
 from gym_sts.spaces import constants
-from gym_sts.spaces.observations import serializers, types, utils
+from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
-from .map import MapStateObs
+from .map import MapObs
 
 
 class PersistentStateObs(ObsComponent):
@@ -17,7 +18,7 @@ class PersistentStateObs(ObsComponent):
         self.relics = []
         self.deck = []
         self.keys = {}
-        self.map = MapStateObs()
+        self.map = MapObs()
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -27,10 +28,27 @@ class PersistentStateObs(ObsComponent):
             self.potions = parse_obj_as(list[types.Potion], game_state["potions"])
             self.relics = parse_obj_as(list[types.Relic], game_state["relics"])
             self.deck = parse_obj_as(list[types.Card], game_state["deck"])
-            self.map = MapStateObs(state)
+            self.map = MapObs(state)
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
+
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "health": spaces.generate_health_space(),
+                "gold": MultiBinary(constants.LOG_MAX_GOLD),
+                "potions": MultiDiscrete(
+                    [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
+                ),
+                # TODO add counters and usages (e.g. lizard tail) to relics
+                "relics": MultiBinary(constants.NUM_RELICS),
+                "deck": spaces.generate_card_space(),
+                "keys": MultiBinary(constants.NUM_KEYS),
+                "map": MapObs.space(),
+            }
+        )
 
     def serialize(self) -> dict:
         health = serializers.serialize_health(self.hp, self.max_hp)

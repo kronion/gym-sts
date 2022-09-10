@@ -1,12 +1,26 @@
 from typing import Optional
 
+from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+
 from gym_sts.spaces import constants
-from gym_sts.spaces.observations import serializers, types, utils
+from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
 
 
-class CombatStateObs(ObsComponent):
+def _generate_enemy_space():
+    return Dict(
+        {
+            "id": Discrete(constants.NUM_MONSTER_TYPES),
+            "intent": Discrete(constants.NUM_INTENTS),
+            "block": MultiBinary(constants.LOG_MAX_BLOCK),
+            "effects": spaces.generate_effect_space(),
+            "health": spaces.generate_health_space(),
+        }
+    )
+
+
+class CombatObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
         self.turn = 0
@@ -57,6 +71,25 @@ class CombatStateObs(ObsComponent):
                     self.hand_selects = screen_state["selected"]
                     self.max_selects = screen_state["max_cards"]
                     self.can_pick_zero = screen_state["can_pick_zero"]
+
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "turn": MultiBinary(constants.LOG_MAX_TURN),
+                "hand": MultiDiscrete(
+                    [constants.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
+                ),
+                "energy": MultiBinary(constants.LOG_MAX_ENERGY),
+                "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
+                "block": MultiBinary(constants.LOG_MAX_BLOCK),
+                "effects": spaces.generate_effect_space(),
+                "enemies": Tuple([_generate_enemy_space()] * constants.NUM_ENEMIES),
+                "discard": spaces.generate_card_space(),
+                "draw": spaces.generate_card_space(),
+                "exhaust": spaces.generate_card_space(),
+            }
+        )
 
     def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
         if enemy is not None:

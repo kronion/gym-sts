@@ -1,3 +1,4 @@
+from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import parse_obj_as
 
 from gym_sts.spaces import constants
@@ -6,7 +7,7 @@ from gym_sts.spaces.observations import types, utils
 from .base import ObsComponent
 
 
-class ShopStateObs(ObsComponent):
+class ShopObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
         self.cards = []
@@ -31,6 +32,54 @@ class ShopStateObs(ObsComponent):
                 )
                 self.purge_available = screen_state["purge_available"]
                 self.purge_price = screen_state["purge_cost"]
+
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "cards": Tuple(
+                    [
+                        Dict(
+                            {
+                                "card": MultiBinary(
+                                    constants.LOG_NUM_CARDS_WITH_UPGRADES
+                                ),
+                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                            }
+                        )
+                    ]
+                    * constants.SHOP_CARD_COUNT,
+                ),
+                "relics": Tuple(
+                    [
+                        Dict(
+                            {
+                                "relic": Discrete(constants.NUM_RELICS),
+                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                            }
+                        )
+                    ]
+                    * constants.SHOP_RELIC_COUNT
+                ),
+                "potions": Tuple(
+                    [
+                        Dict(
+                            {
+                                "potion": Discrete(constants.NUM_POTIONS),
+                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                            }
+                        )
+                    ]
+                    * constants.SHOP_POTION_COUNT
+                ),
+                "purge": Dict(
+                    {
+                        "available": Discrete(2),
+                        "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                    }
+                ),
+            }
+        )
 
     def serialize(self) -> dict:
         serialized_cards = [

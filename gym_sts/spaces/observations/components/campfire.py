@@ -1,7 +1,9 @@
+from gym.spaces import Dict, Discrete
+
 from .base import ObsComponent
 
 
-class CampfireStateObs(ObsComponent):
+class CampfireObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
         self.rest = False
@@ -26,6 +28,19 @@ class CampfireStateObs(ObsComponent):
                     if option in rest_options:
                         setattr(self, option, True)
                         self.num_options += 1
+
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "rest": Discrete(2),
+                "smith": Discrete(2),
+                "lift": Discrete(2),
+                "toke": Discrete(2),
+                "dig": Discrete(2),
+                "recall": Discrete(2),
+            }
+        )
 
     def serialize(self) -> dict:
         return {

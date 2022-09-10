@@ -1,11 +1,13 @@
 from typing import Optional
 
+from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
+
 from gym_sts.spaces import constants
 
 from .base import ObsComponent
 
 
-class MapStateObs(ObsComponent):
+class MapObs(ObsComponent):
     def __init__(self, state: Optional[dict] = None):
         self.nodes = []
         self.boss = "NONE"
@@ -14,6 +16,18 @@ class MapStateObs(ObsComponent):
             game_state = state["game_state"]
             self.nodes = game_state["map"]
             self.boss = game_state["act_boss"]
+
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "nodes": MultiDiscrete(
+                    [constants.NUM_MAP_LOCATIONS] * constants.NUM_MAP_NODES
+                ),
+                "edges": MultiBinary(constants.NUM_MAP_EDGES),
+                "boss": Discrete(constants.NUM_NORMAL_BOSSES),
+            }
+        )
 
     def serialize(self) -> dict:
         empty_node = constants.ALL_MAP_LOCATIONS.index("NONE")
