@@ -449,6 +449,11 @@ ALL_CARDS = [
     "Wound",
     "Slimed",
 ]
+NUM_CARDS = len(ALL_CARDS)
+NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
+LOG_NUM_CARDS = math.ceil(math.log(NUM_CARDS, 2))
+LOG_NUM_CARDS_WITH_UPGRADES = LOG_NUM_CARDS + 1  # Use one more bit to indicate upgrade
+
 
 ALL_RELICS = [
     "NONE",  # Indicates the absence of a relic
@@ -935,6 +940,8 @@ ALL_POTIONS = [
     "BloodPotion",
     "ElixirPotion",
 ]
+NUM_POTIONS = len(ALL_POTIONS)
+NUM_POTION_SLOTS = 5
 
 ALL_INTENTS = [
     "NONE",
@@ -955,6 +962,7 @@ ALL_INTENTS = [
     "STUN",
     "UNKNOWN",
 ]
+NUM_INTENTS = len(ALL_INTENTS)
 
 ALL_EVENTS = [
     "Shining Light",
@@ -1011,6 +1019,42 @@ ALL_EVENTS = [
     "FaceTrader",
 ]
 
+# You can read more about the structure of the map here:
+# https://kosgames.com/slay-the-spire-map-generation-guide-26769/
+ALL_MAP_LOCATIONS = [
+    "NONE",  # Indicates the absence of node
+    "M",  # Monster
+    "?",  # Unknown
+    "$",  # Shop
+    "E",  # Elite
+    "B",  # Burning Elite. Note that this symbol isn't actually used by the game.
+    "T",  # Treasure
+    "R",  # Rest site
+]
+NUM_MAP_LOCATIONS = len(ALL_MAP_LOCATIONS)
+NUM_MAP_NODES_PER_ROW = 7
+NUM_MAP_ROWS = 15
+NUM_MAP_NODES = NUM_MAP_NODES_PER_ROW * NUM_MAP_ROWS
+# Nodes can only have edges to endpoints in the same column, or one column to the
+# left or right. Thus, we store three bits per node, representing the presence of an
+# edge to the left, center, and right.
+NUM_MAP_EDGES_PER_NODE = 3  # Max branching factor from one layer to the next
+NUM_MAP_EDGES = NUM_MAP_NODES_PER_ROW * NUM_MAP_EDGES_PER_NODE * (NUM_MAP_ROWS - 1)
+
+NORMAL_BOSSES = [
+    "NONE",  # A placeholder for an "empty" observation
+    "The Guardian",
+    "Hexaghost",
+    "Slime Boss",
+    "Collector",
+    "Automaton",
+    "Champ",
+    "Awakened One",
+    "Time Eater",
+    "Donu and Deca",
+]
+NUM_NORMAL_BOSSES = len(NORMAL_BOSSES)
+
 ALL_REWARD_TYPES = [
     "NONE",  # An empty reward slot
     "GOLD",
@@ -1031,23 +1075,13 @@ NUM_KEYS = len(ALL_KEYS)
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 15
 
-# STS Wiki says 42 potions in total, not sure if it's complete
-NUM_POTIONS = len(ALL_POTIONS)
-NUM_POTION_SLOTS = 5
-
 # I count 179 relics on the STS wiki, including the Circlet
 NUM_RELICS = len(ALL_RELICS)
 
 NUM_ENEMIES = 6
 
-NUM_INTENTS = len(ALL_INTENTS)
-
 # I really don't know the number of monster types
 NUM_MONSTER_TYPES = len(ALL_MONSTER_TYPES)
-
-# I estimate at most 400 excluding upgrades
-NUM_CARDS = len(ALL_CARDS)
-NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
 
 HAND_SIZE = 10
 
@@ -1064,7 +1098,9 @@ NUM_EFFECTS = len(ALL_EFFECTS)
 SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3
 SHOP_POTION_COUNT = 3
-SHOP_LOG_MAX_COST = 10
+SHOP_LOG_MAX_PRICE = 10
+
+REWARD_CARD_COUNT = 4  # Default of 3, +1 for Question Card
 
 # Boss gold reward max * golden idol bonus * buffer in case I'm wrong
 _COMBAT_REWARD_MAX_GOLD = int(105 * 1.25 * 1.25)
