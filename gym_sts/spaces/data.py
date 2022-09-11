@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from gym_sts.constants import EVENTS_JSON_PATH
 from gym_sts.spaces.constants import (
@@ -42,7 +42,7 @@ class EventData:
             text = text.replace(s, "")
         return text
 
-    def find_matches(self, event_id: str, text: str) -> list:
+    def find_matches(self, event_id: str, text: str) -> List[Tuple[str, bool]]:
         # Returns (str, bool) pairs for matching texts
         # The order in which the elements are output should be deterministic
         match_list = []
