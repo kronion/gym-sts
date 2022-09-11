@@ -35,7 +35,8 @@ class EventData:
 
             # NOTE: The game uses the event_id keys, internally, NOT the names
             self.event_texts[event_id] = results
-            self.sanity_check()
+
+        self.sanity_check()
 
     def remove_formatting(self, text: str):
         for s in REMOVED_STRINGS:
