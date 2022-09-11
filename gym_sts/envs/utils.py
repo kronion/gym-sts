@@ -49,6 +49,7 @@ class ActionValidators:
             "CHEST",
             "COMBAT_REWARD",
             "EVENT",
+            "GRID",
             "MAP",
             "REST",
             "SHOP_ROOM",
