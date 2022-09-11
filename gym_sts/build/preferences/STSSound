@@ -1,4 +1,5 @@
 {
   "Ambience On": "true",
-  "Mute in Bg": "true"
+  "Mute in Bg": "true",
+  "Master Volume": "0.0"
 }
