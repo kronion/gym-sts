@@ -15,9 +15,9 @@ OBSERVATION_SPACE = Dict(
         "campfire_state": components.CampfireObs.space(),
         "card_reward_state": components.CardRewardObs.space(),
         "combat_reward_space": components.CombatRewardObs.space(),
+        "event_space": components.EventStateObs.space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
-        # TODO: Worry about random events
     }
 )
 
@@ -30,6 +30,7 @@ class Observation:
         self.campfire_state = components.CampfireObs(state)
         self.card_reward_state = components.CardRewardObs(state)
         self.combat_reward_state = components.CombatRewardObs(state)
+        self.event_state = components.EventStateObs(state)
 
         # Keep a reference to the raw CommunicationMod response
         self.state = state
@@ -96,4 +97,5 @@ class Observation:
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
             "combat_reward_state": self.combat_reward_state.serialize(),
+            "event_state": self.event_state.serialize(),
         }
