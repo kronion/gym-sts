@@ -9,6 +9,12 @@ All installation commands are expected to be run as root.
 
 - Java JDK 8
 - Docker
+- A copy of Slay the Spire, particularly its `desktop-1.0.jar` file.
+- The JAR files for several mods:
+  - ModTheSpire
+  - BaseMod
+  - CommunicationMod
+  - SuperFastMode
 
 # Installation
 
@@ -36,6 +42,7 @@ gym-sts/
   mods/
     BaseMod.jar
     CommunicationMod.jar
+    SuperFastMode.jar
 ```
 
 # Build
