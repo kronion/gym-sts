@@ -35,4 +35,4 @@ WORKDIR /game
 COPY pipe_to_host.sh pipe_to_host.sh
 
 ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-f", "/tmp/sts.xauth"]
-CMD ["java", "-jar", "/game/lib/ModTheSpire.jar", "--skip-intro", "--mods", "basemod,CommunicationMod"]
+CMD ["java", "-jar", "/game/lib/ModTheSpire.jar", "--skip-intro", "--mods", "basemod,CommunicationMod,superfastmode"]
