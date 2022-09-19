@@ -8,7 +8,7 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.9"
 docker = "^5.0.3"
-gym = "^0.25.1"
+gym = "^0.23.1"
 pydantic = "^1.9.2"
 
 [tool.poetry.dev-dependencies]
