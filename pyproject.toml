@@ -10,6 +10,8 @@ python = "^3.9"
 docker = "^5.0.3"
 gym = "^0.23.1"
 pydantic = "^1.9.2"
+ray = {extras = ["rllib"], version = "^2.0.0"}
+torch = "^1.12.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.4.0"
