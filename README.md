@@ -16,9 +16,12 @@ All installation commands are expected to be run as root.
   - CommunicationMod
   - SuperFastMode
 
+This package has been tested with Python 3.9, but more recent Pythons may also work
+as long as you can build dependencies (there may not be prebuilt wheels).
+
 # Installation
 
-IMPORTANT: These intructions assume you're a developer of this library, not that you're
+IMPORTANT: These instructions assume you're a developer of this library, not that you're
 trying to add this library as a dependency for another project.
 
 1. Install the package along with its dependencies:
