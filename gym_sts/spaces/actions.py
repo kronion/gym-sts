@@ -9,7 +9,7 @@ from gym_sts.spaces import constants
 class Action(BaseModel):
     _id: int = PrivateAttr(-1)
 
-    def to_command(self):
+    def to_command(self) -> str:
         raise RuntimeError("not implemented")
 
 
