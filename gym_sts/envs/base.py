@@ -23,6 +23,12 @@ CONTAINER_LIBDIR = "/game/lib"
 CONTAINER_MODSDIR = "/game/mods"
 
 
+def observation_value(obs: Observation) -> float:
+    value = float(obs.persistent_state.floor)
+    value += obs.persistent_state.hp / 100
+    return value
+
+
 class SlayTheSpireGymEnv(gym.Env):
     def __init__(
         self, lib_dir: str, mods_dir: str, output_dir: str, headless: bool = False
@@ -287,11 +293,25 @@ class SlayTheSpireGymEnv(gym.Env):
     def step(self, action_id: int) -> Tuple[Observation, float, bool, dict]:
         action = ACTIONS[action_id]
         obs = self.communicator._manual_command(action.to_command())
+
+        prev_obs = self.observation_cache.get()
+        if prev_obs is None:
+            reward = 0.0
+        else:
+            reward = observation_value(obs) - observation_value(prev_obs)
+
         self.observation_cache.append(obs)
 
-        reward = 1
+        valid_mask = [False] * len(ACTIONS)
+        for action in self.valid_actions():
+            valid_mask[action._id] = True
 
-        return obs, reward, obs.game_over, {"observation": obs}
+        info = {
+            "observation": obs,
+            "valid_mask": valid_mask,
+        }
+
+        return obs, reward, obs.game_over, info
 
     def screenshot(self, filename: str) -> None:
         """
@@ -308,6 +328,8 @@ class SlayTheSpireGymEnv(gym.Env):
             )
 
     def valid_actions(self) -> list[Action]:
+        # Note: this method is rather inefficient. We could instead generate the
+        # valid actions from the observation.
         latest_obs = self.observation_cache.get()
         if latest_obs is None:
             raise RuntimeError("Game not started?")

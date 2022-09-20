@@ -11,6 +11,7 @@ from .map import MapObs
 class PersistentStateObs(ObsComponent):
     def __init__(self, state: dict):
         # Sane defaults
+        self.floor = 0
         self.hp = 0
         self.max_hp = 0
         self.gold = 0
@@ -22,6 +23,7 @@ class PersistentStateObs(ObsComponent):
 
         if "game_state" in state:
             game_state = state["game_state"]
+            self.floor = game_state["floor"]
             self.hp = game_state["current_hp"]
             self.max_hp = game_state["max_hp"]
             self.gold = game_state["gold"]
