@@ -4,6 +4,7 @@ import pathlib
 import random
 import shutil
 import subprocess
+import tempfile
 import time
 from typing import Optional, Tuple, Union
 
@@ -31,7 +32,11 @@ def observation_value(obs: Observation) -> float:
 
 class SlayTheSpireGymEnv(gym.Env):
     def __init__(
-        self, lib_dir: str, mods_dir: str, output_dir: str, headless: bool = False
+        self,
+        lib_dir: str,
+        mods_dir: str,
+        output_dir: Optional[str] = None,
+        headless: bool = False,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -40,6 +45,7 @@ class SlayTheSpireGymEnv(gym.Env):
             lib_dir: The directory containing desktop-1.0.jar and ModTheSpire.jar.
             mods_dir: The directory containing BaseMod.jar and CommunicationMod.jar.
             output_dir: Directory used for communication between env and containers.
+                If None, a temporary directory will be created and later cleaned up.
             headless: If True, run the game in a headless Docker container. Otherwise,
                 run the game directly on the host (presumably with a visible interface).
         """
@@ -47,6 +53,10 @@ class SlayTheSpireGymEnv(gym.Env):
         self.lib_dir = pathlib.Path(lib_dir).resolve()
         self.mods_dir = pathlib.Path(mods_dir).resolve()
 
+        if output_dir is None:
+            self._temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
+            output_dir = self._temp_dir.name
+            atexit.register(self._temp_dir.cleanup)
         self.output_dir = pathlib.Path(output_dir).resolve()
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
@@ -118,7 +128,7 @@ class SlayTheSpireGymEnv(gym.Env):
             init=True,
             detach=True,
             volumes={
-                self.output_dir.resolve(): dict(bind=CONTAINER_OUTDIR, mode="rw"),
+                self.output_dir: dict(bind=CONTAINER_OUTDIR, mode="rw"),
                 self.lib_dir: dict(bind=CONTAINER_LIBDIR, mode="ro"),
                 self.mods_dir: dict(bind=CONTAINER_MODSDIR, mode="ro"),
             },
