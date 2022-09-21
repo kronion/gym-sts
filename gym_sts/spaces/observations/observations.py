@@ -14,8 +14,8 @@ OBSERVATION_SPACE = Dict(
         "shop_state": components.ShopObs.space(),
         "campfire_state": components.CampfireObs.space(),
         "card_reward_state": components.CardRewardObs.space(),
-        "combat_reward_space": components.CombatRewardObs.space(),
-        "event_space": components.EventStateObs.space(),
+        "combat_reward_state": components.CombatRewardObs.space(),
+        "event_state": components.EventStateObs.space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
     }
@@ -35,8 +35,12 @@ class Observation:
         # Keep a reference to the raw CommunicationMod response
         self.state = state
 
+    @property
+    def has_error(self) -> bool:
+        return "error" in self.state
+
     def check_for_error(self) -> None:
-        if "error" in self.state:
+        if self.has_error:
             raise ObservationError(self.state["error"])
 
     @property
@@ -96,6 +100,7 @@ class Observation:
             "combat_state": self.combat_state.serialize(),
             "shop_state": self.shop_state.serialize(),
             "campfire_state": self.campfire_state.serialize(),
+            "card_reward_state": self.card_reward_state.serialize(),
             "combat_reward_state": self.combat_reward_state.serialize(),
             "event_state": self.event_state.serialize(),
         }
