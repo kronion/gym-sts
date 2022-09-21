@@ -326,7 +326,8 @@ class SlayTheSpireGymEnv(gym.Env):
                 "had" if obs.has_error else "did not have",
             )
 
-        if obs.has_error:
+        had_error = obs.has_error
+        if had_error:
             reward = -1.0
             # Maybe check that the new obs is the same as the old one, modulo
             # the error field?
@@ -342,6 +343,7 @@ class SlayTheSpireGymEnv(gym.Env):
         info = {
             "observation": obs,
             "valid_mask": valid_mask,
+            "had_error": had_error,
         }
 
         return obs.serialize(), reward, obs.game_over, info
