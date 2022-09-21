@@ -1,4 +1,5 @@
 import atexit
+import logging
 import os
 import pathlib
 import random
@@ -260,7 +261,7 @@ class SlayTheSpireGymEnv(gym.Env):
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> Union[Observation, Tuple[Observation, dict]]:
+    ) -> Union[dict, Tuple[dict, dict]]:
         """
         Args:
             seed: An int used to initialize the env's PRNG. The PRNG is used to
@@ -299,21 +300,40 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_cache.append(obs)
 
         if return_info:
-            return obs, {"seed": self.seed, "sts_seed": self.sts_seed}
+            info = {
+                "seed": self.seed,
+                "sts_seed": self.sts_seed,
+                "observation": obs,
+            }
+            return obs.serialize(), info
         else:
-            return obs
+            return obs.serialize()
 
-    def step(self, action_id: int) -> Tuple[Observation, float, bool, dict]:
+    def step(self, action_id: int) -> Tuple[dict, float, bool, dict]:
+        prev_obs = self.observation_cache.get()
+        assert prev_obs is not None  # should have been set by reset()
+
         action = ACTIONS[action_id]
+        is_valid = ActionValidators.validate(action, prev_obs)
+
         obs = self.communicator._manual_command(action.to_command())
 
-        prev_obs = self.observation_cache.get()
-        if prev_obs is None:
-            reward = 0.0
+        if obs.has_error == is_valid:
+            # indicates a mismatch in our action validity checking
+            logging.error(
+                "Action was %svalid, but obs %s an error.",
+                "" if is_valid else "not ",
+                "had" if obs.has_error else "did not have",
+            )
+
+        if obs.has_error:
+            reward = -1.0
+            # Maybe check that the new obs is the same as the old one, modulo
+            # the error field?
+            obs = prev_obs
         else:
             reward = observation_value(obs) - observation_value(prev_obs)
-
-        self.observation_cache.append(obs)
+            self.observation_cache.append(obs)
 
         valid_mask = [False] * len(ACTIONS)
         for action in self.valid_actions():
@@ -324,7 +344,7 @@ class SlayTheSpireGymEnv(gym.Env):
             "valid_mask": valid_mask,
         }
 
-        return obs, reward, obs.game_over, info
+        return obs.serialize(), reward, obs.game_over, info
 
     def screenshot(self, filename: str) -> None:
         """
