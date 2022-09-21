@@ -39,7 +39,14 @@ def main():
         ]
 
         action = rng.choice(actions)
-        _, _, done, info = env.step(action._id)
+        try:
+            _, _, done, info = env.step(action._id)
+        except TimeoutError as e:
+            run_time = time.perf_counter() - start_time
+            print(f"Error on step {num_steps} after {run_time} seconds.")
+            print(e)
+            break
+
         assert info["had_error"] != want_valid
 
         if done:

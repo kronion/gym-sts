@@ -42,7 +42,7 @@ class Receiver:
 
             time.sleep(self.sleep_time)
 
-        raise Exception(
+        raise TimeoutError(
             f"Waited {self.timeout} seconds for game state to be ready "
             "for command, but it didn't happen."
         )
