@@ -53,16 +53,19 @@ class SlayTheSpireGymEnv(gym.Env):
         self.lib_dir = pathlib.Path(lib_dir).resolve()
         self.mods_dir = pathlib.Path(mods_dir).resolve()
 
+        self._temp_dir = None
         if output_dir is None:
             self._temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
             output_dir = self._temp_dir.name
-            atexit.register(self._temp_dir.cleanup)
         self.output_dir = pathlib.Path(output_dir).resolve()
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
         self.logfile_path = self.output_dir / "stderr.log"
 
         self.logfile = self.logfile_path.open("w")
+
+        self.container: Optional[Container] = None
+        self.process: Optional[subprocess.Popen] = None
 
         if headless:
             self._run_container()
@@ -85,6 +88,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_space = OBSERVATION_SPACE
 
         self.observation_cache = ObservationCache()
+
+        atexit.register(self.close)
 
     @classmethod
     def build_image(cls) -> None:
@@ -121,7 +126,7 @@ class SlayTheSpireGymEnv(gym.Env):
                 "Please build it with SlayTheSpireGymEnv.build_image()"
             )
 
-        self.container: Container = self.client.containers.run(
+        self.container = self.client.containers.run(
             image=constants.DOCKER_IMAGE_TAG,
             remove=True,
             devices=["/dev/snd"],
@@ -135,7 +140,6 @@ class SlayTheSpireGymEnv(gym.Env):
         )
         print(f"started docker container {self.container.name}")
         print(f"To view logs, run `docker logs {self.container.name}`.")
-        atexit.register(self.container.stop)
 
     def _run_locally(self) -> None:
         print("Starting STS on the host machine")
@@ -158,7 +162,6 @@ class SlayTheSpireGymEnv(gym.Env):
             stdout=self.logfile,
             stderr=self.logfile,
         )
-        atexit.register(lambda: self.process.kill())
 
     def _do_action(self, action: str) -> Observation:
         """
@@ -327,6 +330,8 @@ class SlayTheSpireGymEnv(gym.Env):
         """
         Take a screenshot of the current game. Only works with headless=True.
         """
+        if self.container is None:
+            raise NotImplementedError("screenshot only works with headless=True")
         file_path = pathlib.Path(CONTAINER_OUTDIR) / filename
         exit_code, output = self.container.exec_run(
             cmd=["scrot", str(file_path)],
@@ -350,3 +355,16 @@ class SlayTheSpireGymEnv(gym.Env):
                 valid_actions.append(action)
 
         return valid_actions
+
+    def close(self):
+        if self._temp_dir is not None:
+            self._temp_dir.cleanup()
+            self._temp_dir = None
+
+        if self.container is not None:
+            self.container.stop()
+            self.container = None
+
+        if self.process is not None:
+            self.process.terminate()
+            self.process = None
