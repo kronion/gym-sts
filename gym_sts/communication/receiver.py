@@ -35,7 +35,7 @@ class Receiver:
                 if state["ready_for_command"]:
                     return state
 
-            # Try again in 5 milliseconds
+            # Try again in 50 milliseconds
             time.sleep(0.05)
 
         raise Exception(
