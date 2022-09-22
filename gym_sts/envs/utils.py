@@ -83,19 +83,31 @@ class ActionValidators:
         card = hand[index]
 
         target_index = action.target_index
-        if target_index is not None and not card.has_target:
-            return False
+
+        # Technically it should be invalid to specify a target if the card
+        # doesn't take a target (and this would cut down on the number of valid
+        # actions), but the game simply ignores the target choice, so it's not an
+        # error. Because we only want actions to be invalid if the game truly won't
+        # accept them, we've commented this validation check out for now.
+        # if target_index is not None and not card.has_target:
+        #     return False
+
         if target_index is None and card.has_target:
             return False
 
         enemies = observation.combat_state.enemies
         if target_index is not None:
+            # Even if the card doesn't take a target, STS still requires the stated
+            # target index to be in bounds.
             if target_index >= len(enemies):
                 return False
 
-            enemy = enemies[target_index]
-            if enemy["is_gone"]:
-                return False
+            # We confirm the card actually takes a target. If it doesn't, the target
+            # selection is ignored anyway.
+            if card.has_target:
+                enemy = enemies[target_index]
+                if enemy["is_gone"]:
+                    return False
 
         return card.is_playable
 
