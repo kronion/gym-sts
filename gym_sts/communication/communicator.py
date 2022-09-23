@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 from gym_sts.communication.receiver import Receiver
@@ -64,8 +65,16 @@ class Communicator:
     def start(self, player_class: str, ascension: int, seed: str) -> Observation:
         self.receiver.empty_fifo()
         self.sender.send_start(player_class, ascension, seed)
-        state = self.receiver.receive_game_state()
-        return Observation(state)
+
+        tries = 3
+        for _ in range(tries):
+            state = self.receiver.receive_game_state()
+            if state["in_game"]:
+                return Observation(state)
+
+            time.sleep(0.05)
+
+        raise TimeoutError("Waited for game to start, but it didn't happen.")
 
     def state(self) -> Observation:
         """

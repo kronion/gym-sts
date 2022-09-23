@@ -36,7 +36,7 @@ class ActionValidators:
             return False
 
         if observation.in_combat:
-            if observation.screen_type == "HAND_SELECT":
+            if observation.screen_type in ["GRID", "HAND_SELECT"]:
                 return cls._validate_choice(action, observation)
             else:
                 # TODO determine if there are any other choices that could
@@ -138,8 +138,15 @@ class ActionValidators:
         potion = potions[index]
 
         target_index = action.target_index
-        if target_index is not None and not potion.requires_target:
-            return False
+
+        # Technically it should be invalid to specify a target if the card
+        # doesn't take a target (and this would cut down on the number of valid
+        # actions), but the game simply ignores the target choice, so it's not an
+        # error. Because we only want actions to be invalid if the game truly won't
+        # accept them, we've commented this validation check out for now.
+        # if target_index is not None and not potion.requires_target:
+        #     return False
+
         if target_index is None and potion.requires_target:
             return False
 
