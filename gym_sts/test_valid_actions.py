@@ -14,12 +14,13 @@ def main():
     parser.add_argument("lib_dir")
     parser.add_argument("mods_dir")
     parser.add_argument("--build_image", action="store_true")
+    parser.add_argument("--headless", action="store_true")
     parser.add_argument("--runtime", default=30, type=int)
     args = parser.parse_args()
 
     if args.build_image:
         SlayTheSpireGymEnv.build_image()
-    env = SlayTheSpireGymEnv(args.lib_dir, args.mods_dir, headless=True)
+    env = SlayTheSpireGymEnv(args.lib_dir, args.mods_dir, headless=args.headless)
     env.reset(seed=42)
     rng = random.Random(42)
 
