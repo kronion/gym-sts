@@ -195,6 +195,10 @@ class ActionValidators:
 
         raise ValueError("Unrecognized action type")
 
+    @classmethod
+    def valid_actions(cls, observation: Observation):
+        return [a for a in actions.ACTIONS if cls.validate(a, observation)]
+
 
 class SeedHelpers:
     char_set = "0123456789ABCDEFGHIJKLMNPQRSTUVWXYZ"  # Note no O
