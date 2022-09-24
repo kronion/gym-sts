@@ -11,10 +11,11 @@ from typing import Optional, Tuple, Union
 
 import docker
 import gym
+import gym.spaces
 from docker.models.containers import Container
 
 from gym_sts import constants
-from gym_sts.communication import Communicator
+from gym_sts.communication import GenericCommunicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
@@ -26,10 +27,36 @@ CONTAINER_LIBDIR = "/game/lib"
 CONTAINER_MODSDIR = "/game/mods"
 
 
-def observation_value(obs: Observation) -> float:
-    value = float(obs.persistent_state.floor)
-    value += obs.persistent_state.hp / 100
-    return value
+class ObservationWithMask(Observation):
+    """Adds valid action mask to observation."""
+
+    def __init__(self, state: dict):
+        super().__init__(state)
+        if self.stable and not self.has_error:
+            self.valid_actions = get_valid(self)
+        else:
+            self.valid_actions = []
+
+    @property
+    def action_mask(self) -> list[bool]:
+        mask = [False] * len(ACTIONS)
+        for action in self.valid_actions:
+            mask[action._id] = True
+        return mask
+
+    def serialize(self) -> dict:
+        result = super().serialize()
+        result["valid_action_mask"] = self.action_mask
+        return result
+
+    @classmethod
+    def space(cls) -> gym.spaces.Space:
+        return gym.spaces.Dict(
+            dict(
+                OBSERVATION_SPACE,
+                valid_action_mask=gym.spaces.MultiBinary(ACTION_SPACE.n),
+            )
+        )
 
 class StSError(Exception):
     """General class of StS exceptions."""
@@ -77,7 +104,9 @@ class SlayTheSpireGymEnv(gym.Env):
             self._run_locally()
 
         print("Opening pipe files...")
-        self.communicator = Communicator(self.input_path, self.output_path)
+        self.communicator = GenericCommunicator(
+            self.input_path, self.output_path, state_wrapper=ObservationWithMask
+        )
         print("Opened pipe files.")
 
         self.ready()
@@ -94,9 +123,9 @@ class SlayTheSpireGymEnv(gym.Env):
         self.sts_seed: Optional[str] = None  # The seed used by the game.
 
         self.action_space = ACTION_SPACE
-        self.observation_space = OBSERVATION_SPACE
+        self.observation_space = ObservationWithMask.space()
 
-        self.observation_cache: Cache[Observation] = Cache()
+        self.observation_cache: Cache[ObservationWithMask] = Cache()
 
         atexit.register(self.close)
 
@@ -192,7 +221,7 @@ class SlayTheSpireGymEnv(gym.Env):
         obs = self.communicator.resign()
         assert obs.screen_type == "MAIN_MENU"
 
-    def observe(self, add_to_cache: bool = False) -> Observation:
+    def observe(self, add_to_cache: bool = False) -> ObservationWithMask:
         """
         Fetches the latest game state and returns its observation.
 
@@ -336,19 +365,14 @@ class SlayTheSpireGymEnv(gym.Env):
         had_error = obs.has_error
         if had_error:
             reward = -1.0
-            # Maybe check that the new obs is the same as the old one, modulo
-            # the error field?
             obs = prev_obs
-            valid_actions = get_valid(obs)  # use cached?
         else:
-            valid_actions = get_valid(obs)
             success = False
             for _ in range(10):
-                if len(valid_actions) == 0:
+                if len(obs.valid_actions) == 0:
                     # this can indicate instability
                     time.sleep(1)
                     obs = self.observe()
-                    valid_actions = get_valid(obs)
                 else:
                     success = True
                     break
@@ -358,13 +382,8 @@ class SlayTheSpireGymEnv(gym.Env):
             reward = obs_value(obs) - obs_value(prev_obs)
             self.observation_cache.append(obs)
 
-        valid_mask = [False] * len(ACTIONS)
-        for action in valid_actions:
-            valid_mask[action._id] = True
-
         info = {
             "observation": obs,
-            "valid_mask": valid_mask,
             "had_error": had_error,
         }
 
