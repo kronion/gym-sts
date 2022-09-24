@@ -18,7 +18,8 @@ from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
-from .utils import ActionValidators, ObservationCache, SeedHelpers
+from .action_validation import get_valid, validate
+from .utils import Cache, SeedHelpers, obs_value
 
 CONTAINER_OUTDIR = "/game/out"
 CONTAINER_LIBDIR = "/game/lib"
@@ -95,7 +96,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self.action_space = ACTION_SPACE
         self.observation_space = OBSERVATION_SPACE
 
-        self.observation_cache = ObservationCache()
+        self.observation_cache: Cache[Observation] = Cache()
 
         atexit.register(self.close)
 
@@ -320,7 +321,7 @@ class SlayTheSpireGymEnv(gym.Env):
         assert prev_obs is not None  # should have been set by reset()
 
         action = ACTIONS[action_id]
-        is_valid = ActionValidators.validate(action, prev_obs)
+        is_valid = validate(action, prev_obs)
 
         obs = self.communicator._manual_command(action.to_command())
 
@@ -338,23 +339,23 @@ class SlayTheSpireGymEnv(gym.Env):
             # Maybe check that the new obs is the same as the old one, modulo
             # the error field?
             obs = prev_obs
-            valid_actions = ActionValidators.valid_actions(obs)  # use cached?
+            valid_actions = get_valid(obs)  # use cached?
         else:
-            valid_actions = ActionValidators.valid_actions(obs)
+            valid_actions = get_valid(obs)
             success = False
             for _ in range(10):
                 if len(valid_actions) == 0:
                     # this can indicate instability
                     time.sleep(1)
                     obs = self.observe()
-                    valid_actions = ActionValidators.valid_actions(obs)
+                    valid_actions = get_valid(obs)
                 else:
                     success = True
                     break
             if not success:
                 raise StSError("No valid actions.")
 
-            reward = observation_value(obs) - observation_value(prev_obs)
+            reward = obs_value(obs) - obs_value(prev_obs)
             self.observation_cache.append(obs)
 
         valid_mask = [False] * len(ACTIONS)
@@ -392,7 +393,7 @@ class SlayTheSpireGymEnv(gym.Env):
         if latest_obs is None:
             raise RuntimeError("Game not started?")
 
-        return ActionValidators.valid_actions(latest_obs)
+        return get_valid(latest_obs)
 
     def close(self):
         if self._temp_dir is not None:

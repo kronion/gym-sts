@@ -1,203 +1,8 @@
 import random
+import typing as tp
 from typing import Optional
 
-from gym_sts.spaces import actions
 from gym_sts.spaces.observations import Observation
-
-
-class ActionValidators:
-    @staticmethod
-    def validate_end_turn(action: actions.EndTurn, observation: Observation) -> bool:
-        return "end" in observation._available_commands
-
-    @staticmethod
-    def validate_return(action: actions.Return, observation: Observation) -> bool:
-        for word in ["cancel", "leave", "return", "skip"]:
-            if word in observation._available_commands:
-                return True
-
-        return False
-
-    @staticmethod
-    def validate_proceed(action: actions.Proceed, observation: Observation) -> bool:
-        for word in ["confirm", "proceed"]:
-            if word in observation._available_commands:
-                return True
-
-        return False
-
-    @staticmethod
-    def _validate_choice(action: actions.Choose, observation: Observation) -> bool:
-        return action.choice_index < len(observation.choice_list)
-
-    @classmethod
-    def validate_choose(cls, action: actions.Choose, observation: Observation) -> bool:
-        if "choose" not in observation._available_commands:
-            return False
-
-        if observation.in_combat:
-            if observation.screen_type in ["GRID", "HAND_SELECT"]:
-                return cls._validate_choice(action, observation)
-            else:
-                # TODO determine if there are any other choices that could
-                # be made mid-combat, such as picking from deck/discard/exhaust,
-                # or scrying.
-                print("NOT IMPLEMENTED")
-                return False
-        elif observation.screen_type in [
-            "CARD_REWARD",
-            "CHEST",
-            "COMBAT_REWARD",
-            "EVENT",
-            "GRID",
-            "MAP",
-            "REST",
-            "SHOP_ROOM",
-            "SHOP_SCREEN",
-        ]:
-            return cls._validate_choice(action, observation)
-        else:
-            # TODO handle choices outside of combat, like events
-            print("NOT IMPLEMENTED")
-            return True
-
-    @staticmethod
-    def validate_play(action: actions.PlayCard, observation: Observation) -> bool:
-        if "play" not in observation._available_commands:
-            return False
-
-        if not observation.in_combat or observation.screen_type != "NONE":
-            return False
-
-        # Choices correspond to playing cards
-        hand = observation.combat_state.hand
-        index = action.card_position
-        # Adjust to account for CommunicationMod's odd indexing scheme.
-        index -= 1
-        if index < 0:
-            index += 10
-
-        if index >= len(hand):
-            return False
-
-        card = hand[index]
-
-        target_index = action.target_index
-
-        # Technically it should be invalid to specify a target if the card
-        # doesn't take a target (and this would cut down on the number of valid
-        # actions), but the game simply ignores the target choice, so it's not an
-        # error. Because we only want actions to be invalid if the game truly won't
-        # accept them, we've commented this validation check out for now.
-        # if target_index is not None and not card.has_target:
-        #     return False
-
-        if target_index is None and card.has_target:
-            return False
-
-        enemies = observation.combat_state.enemies
-        if target_index is not None:
-            # Even if the card doesn't take a target, STS still requires the stated
-            # target index to be in bounds.
-            if target_index >= len(enemies):
-                return False
-
-            # We confirm the card actually takes a target. If it doesn't, the target
-            # selection is ignored anyway.
-            if card.has_target:
-                enemy = enemies[target_index]
-                if enemy["is_gone"]:
-                    return False
-
-        return card.is_playable
-
-    @staticmethod
-    def _validate_potion(
-        action: actions.PotionAction, observation: Observation, prop: str
-    ) -> bool:
-        if "potion" not in observation._available_commands:
-            return False
-
-        index = action.potion_index
-        potions = observation.persistent_state.potions
-        if index >= len(potions):
-            return False
-
-        potion = potions[index]
-        return getattr(potion, prop)
-
-    @classmethod
-    def validate_use_potion(
-        cls, action: actions.UsePotion, observation: Observation
-    ) -> bool:
-        if not cls._validate_potion(action, observation, "can_use"):
-            return False
-
-        index = action.potion_index
-        potions = observation.persistent_state.potions
-        potion = potions[index]
-
-        target_index = action.target_index
-
-        # Technically it should be invalid to specify a target if the card
-        # doesn't take a target (and this would cut down on the number of valid
-        # actions), but the game simply ignores the target choice, so it's not an
-        # error. Because we only want actions to be invalid if the game truly won't
-        # accept them, we've commented this validation check out for now.
-        # if target_index is not None and not potion.requires_target:
-        #     return False
-
-        if potion.requires_target:
-            # Explosive Potion is basically incorrectly defined within STS.
-            # It doesn't actually require a target.
-            if potion.id == "Explosive Potion":
-                return True
-
-            if target_index is None:
-                return False
-
-            # Unlike when playing cards, STS disregards out-of-range target indices
-            # when using potions that don't take a target.
-            enemies = observation.combat_state.enemies
-            if target_index >= len(enemies):
-                return False
-
-        return True
-
-    @classmethod
-    def validate_discard_potion(
-        cls, action: actions.DiscardPotion, observation: Observation
-    ) -> bool:
-        return cls._validate_potion(action, observation, "can_discard")
-
-    @classmethod
-    def validate(cls, action: actions.Action, observation: Observation) -> bool:
-        if isinstance(action, actions.EndTurn):
-            return cls.validate_end_turn(action, observation)
-
-        elif isinstance(action, actions.Return):
-            return cls.validate_return(action, observation)
-
-        elif isinstance(action, actions.Proceed):
-            return cls.validate_proceed(action, observation)
-
-        elif isinstance(action, actions.Choose):
-            return cls.validate_choose(action, observation)
-
-        elif isinstance(action, actions.UsePotion):
-            return cls.validate_use_potion(action, observation)
-
-        elif isinstance(action, actions.DiscardPotion):
-            return cls.validate_discard_potion(action, observation)
-
-        elif isinstance(action, actions.PlayCard):
-            return cls.validate_play(action, observation)
-
-        raise ValueError("Unrecognized action type")
-
-    @classmethod
-    def valid_actions(cls, observation: Observation):
-        return [a for a in actions.ACTIONS if cls.validate(a, observation)]
 
 
 class SeedHelpers:
@@ -240,17 +45,20 @@ class SeedHelpers:
         return seed
 
 
-class ObservationCache:
+T = tp.TypeVar("T")
+
+
+class Cache(tp.Generic[T]):
     def __init__(self, size: int = 10):
         self.size = size
         self.index = 0
-        self.cache: list[Optional[Observation]] = [None] * self.size
+        self.cache: list[Optional[T]] = [None] * self.size
 
-    def append(self, obs: Observation):
+    def append(self, obs: T):
         self.cache[self.index] = obs
         self.index = (self.index + 1) % self.size
 
-    def get(self, ago: int = 0) -> Optional[Observation]:
+    def get(self, ago: int = 0) -> Optional[T]:
         """
         Args:
             ago: The number of observations back to retrieve (zero indexed).
@@ -265,3 +73,10 @@ class ObservationCache:
 
     def reset(self) -> None:
         self.cache = [None] * self.size
+
+
+def obs_value(obs: Observation) -> float:
+    """Useful for creating a reward function."""
+    value = float(obs.persistent_state.floor)
+    value += obs.persistent_state.hp / 100
+    return value
