@@ -147,12 +147,20 @@ class ActionValidators:
         # if target_index is not None and not potion.requires_target:
         #     return False
 
-        if target_index is None and potion.requires_target:
-            return False
+        if potion.requires_target:
+            # Explosive Potion is basically incorrectly defined within STS.
+            # It doesn't actually require a target.
+            if potion.id == "Explosive Potion":
+                return True
 
-        enemies = observation.combat_state.enemies
-        if target_index is not None and target_index >= len(enemies):
-            return False
+            if target_index is None:
+                return False
+
+            # Unlike when playing cards, STS disregards out-of-range target indices
+            # when using potions that don't take a target.
+            enemies = observation.combat_state.enemies
+            if target_index >= len(enemies):
+                return False
 
         return True
 
