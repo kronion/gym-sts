@@ -79,9 +79,14 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.ready()
 
-        # The seed used to initialize the env's prng, which is used to
+        # The seed used to initialize the env's PRNG, which is used to
         # generate the seeds used by the game itself.
         self.seed: Optional[int] = None
+
+        # Similar to above, typically used to return the PRNG to a previously
+        # observed state.
+        self.rng_state: Optional[tuple] = None
+
         self.prng: Optional[random.Random] = None
         self.sts_seed: Optional[str] = None  # The seed used by the game.
 
@@ -274,12 +279,27 @@ class SlayTheSpireGymEnv(gym.Env):
                     as you'd provide in the game's menu. Useful for (re)playing known
                     scenarios. If this parameter is not provided, the env's PRNG will
                     generate a game seed instead.
+                rng_state (object): An object representing the internal state of a PRNG.
+                    If provided, this object will be used to set the env's PRNG. Useful
+                    for (re)playing known scenarios. If provided, the seed argument must
+                    be None.
         """
 
         self._end_game()
 
-        if seed is not None:
+        # TODO @kronion: validate options with pydantic
+
+        if options is not None and "rng_state" in options:
+            if seed is not None:
+                raise ValueError("seed and rng_state cannot both be provided")
+            self.rng_state = options["rng_state"]
+            assert self.rng_state is not None
+            self.seed = None
+            self.prng = random.Random()
+            self.prng.setstate(self.rng_state)
+        elif seed is not None:
             self.seed = seed
+            self.rng_state = None
             self.prng = random.Random(seed)
         elif self.prng is None:
             # If no seed is specified, set the prng on first run.
@@ -303,6 +323,7 @@ class SlayTheSpireGymEnv(gym.Env):
             info = {
                 "seed": self.seed,
                 "sts_seed": self.sts_seed,
+                "rng_state": self.prng.getstate(),
                 "observation": obs,
             }
             return obs.serialize(), info
