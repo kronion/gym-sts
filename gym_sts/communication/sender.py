@@ -34,6 +34,9 @@ class Sender:
     def send_potion(self, action, slot, target) -> None:
         self._send_message(f"POTION {action} {slot} {target}")
 
+    def send_resign(self) -> None:
+        self._send_message("RESIGN")
+
     def send_wait(self, frames: int) -> None:
         self._send_message(f"WAIT {frames}")
 

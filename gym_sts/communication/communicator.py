@@ -62,6 +62,12 @@ class Communicator:
         state = self.receiver.receive_game_state()
         return Observation(state)
 
+    def resign(self) -> Observation:
+        self.receiver.empty_fifo()
+        self.sender.send_resign()
+        state = self.receiver.receive_game_state()
+        return Observation(state)
+
     def start(self, player_class: str, ascension: int, seed: str) -> Observation:
         self.receiver.empty_fifo()
         self.sender.send_start(player_class, ascension, seed)
