@@ -181,40 +181,7 @@ class SlayTheSpireGymEnv(gym.Env):
             return
 
         # If still alive
-        # TODO(collin): document/clean this up
-        if not obs.game_over:
-            # Open the menu in the upper right of the screen
-            self.communicator.click(1900, 10)
-
-            # Click "abandon run"
-            self.communicator.click(1500, 240)
-            self.communicator.click(1500, 240)
-
-            # Confirm
-            self.communicator.click(830, 700)
-            self.communicator.click(830, 700)
-
-            # Acknowledge death
-            self.communicator.click(950, 920)
-            self.communicator.click(950, 920)
-
-            # Return to main menu
-            self.communicator.click(950, 950)
-            self.communicator.click(950, 950)
-        else:
-            # Acknowledge death
-            self.communicator.click(950, 920)
-            self.communicator.click(950, 920)
-
-            # Return to main menu
-            self.communicator.click(950, 950)
-            self.communicator.click(950, 950)
-
-        # TODO have a loop limit to prevent infinite loop
-        while True:
-            obs = self.observe()
-            if not obs.in_game:
-                break
+        self.communicator.resign()
 
     def observe(self, add_to_cache: bool = False) -> Observation:
         """
