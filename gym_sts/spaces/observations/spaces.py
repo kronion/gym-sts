@@ -8,7 +8,7 @@ def generate_card_space():
     # how many cards you have
     # But this could be optimized
     return MultiDiscrete(
-        [constants.MAX_COPIES_OF_CARD] * constants.NUM_CARDS_WITH_UPGRADES
+        [constants.MAX_COPIES_OF_CARD + 1] * constants.NUM_CARDS_WITH_UPGRADES
     )
 
 
