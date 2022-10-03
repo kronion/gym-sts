@@ -98,3 +98,17 @@ class Communicator:
         self.sender.send_wait(frames)
         state = self.receiver.receive_game_state()
         return Observation(state)
+
+    def basemod(self, command: str) -> Observation:
+        """
+        Send a command to the basemod console and return the subsequent game state.
+
+        WARNING: The returned observation is not guaranteed to fully reflect the results
+        of the basemod command. Some actions, like adding cards, queue an animation that
+        CommunicationMod does not wait for before sending the next state.
+        """
+
+        self.receiver.empty_fifo()
+        self.sender.send_basemod(command)
+        state = self.receiver.receive_game_state()
+        return Observation(state)

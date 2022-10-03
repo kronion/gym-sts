@@ -12,6 +12,11 @@ class Action(BaseModel):
     def to_command(self) -> str:
         raise RuntimeError("not implemented")
 
+    class Config:
+        # Allows model instances to be hashable, e.g. they can be added to sets.
+        # See https://pydantic-docs.helpmanual.io/usage/model_config/
+        frozen = True
+
 
 class PickCard(Action):
     card_id: int

@@ -36,7 +36,7 @@ class ActionValidators:
             return False
 
         if observation.in_combat:
-            if observation.screen_type in ["GRID", "HAND_SELECT"]:
+            if observation.screen_type in ["CARD_REWARD", "GRID", "HAND_SELECT"]:
                 return cls._validate_choice(action, observation)
             else:
                 # TODO determine if there are any other choices that could
