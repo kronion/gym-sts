@@ -61,7 +61,7 @@ class Cache(tp.Generic[T]):
     def get(self, ago: int = 0) -> Optional[T]:
         """
         Args:
-            ago: The number of observations back to retrieve (zero indexed).
+            ago: The number of items back to retrieve (zero indexed).
                 The value must be less than the cache size.
         """
 
