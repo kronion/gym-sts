@@ -23,7 +23,6 @@ def env(request):
     headless = request.config.getoption("headless")
 
     env = SlayTheSpireGymEnv(lib_dir, mods_dir, headless=headless)
-
     yield env
 
     env.close()

@@ -1,11 +1,3 @@
-"""
-Tests that an action leads to an error iff it is valid.
-
-Best to run with ipdb to post-mortem debug errors:
-
-python -m ipdb -c c gym_sts/test_valid_actions.py
-"""
-
 import time
 
 from gym_sts.envs.utils import ActionValidators
