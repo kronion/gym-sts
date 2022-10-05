@@ -14,6 +14,8 @@ RUN apt-get update &&  apt-get install -y \
 
 COPY preferences preferences
 
+COPY info.displayconfig info.displayconfig
+
 # Set default sound card to index 1, which is expected to be a
 # loopback sound card created by the host
 COPY asound.conf /etc/asound.conf
@@ -34,5 +36,5 @@ COPY communication_mod.config.properties config.properties
 WORKDIR /game
 COPY pipe_to_host.sh pipe_to_host.sh
 
-ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-f", "/tmp/sts.xauth"]
+ENTRYPOINT ["xvfb-run", "-e", "/dev/stdout", "-f", "/tmp/sts.xauth", "-s", "-screen 0 1024x576x24"]
 CMD ["java", "-jar", "/game/lib/ModTheSpire.jar", "--skip-intro", "--mods", "basemod,CommunicationMod,superfastmode"]
