@@ -19,10 +19,10 @@ def main():
     parser.add_argument("lib_dir")
     parser.add_argument("mods_dir")
     parser.add_argument("out_dir")
-    parser.add_argument("--build_image", action="store_true")
+    parser.add_argument("--build-image", action="store_true")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--runtime", default=30, type=int)
-    parser.add_argument("--allow_invalid", action="store_true")
+    parser.add_argument("--allow-invalid", action="store_true")
     parser.add_argument("--screenshots", action="store_true")
     args = parser.parse_args()
 
@@ -61,7 +61,7 @@ def main():
             raise ValueError("No %svalid actions!" % ("" if want_valid else "in"))
 
         action = rng.choice(actions)
-        print(action)
+        print(repr(action))
         try:
             _, _, done, info = env.step(action._id)
         except TimeoutError as e:
