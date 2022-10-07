@@ -9,8 +9,8 @@ import argparse
 import random
 import time
 
+from gym_sts.envs.action_validation import validate
 from gym_sts.envs.base import SlayTheSpireGymEnv
-from gym_sts.envs.utils import ActionValidators
 from gym_sts.spaces.actions import ACTIONS
 
 
@@ -52,9 +52,7 @@ def main():
         want_valid = rng.choice(valid_choices)
 
         actions = [
-            action
-            for action in ACTIONS
-            if ActionValidators.validate(action, last_obs) == want_valid
+            action for action in ACTIONS if validate(action, last_obs) == want_valid
         ]
 
         if len(actions) == 0:

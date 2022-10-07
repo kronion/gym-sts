@@ -1,5 +1,8 @@
-from gym.spaces import Dict
+import functools
 
+from gym import spaces
+
+from gym_sts.spaces import actions
 from . import components
 
 
@@ -7,7 +10,7 @@ class ObservationError(Exception):
     pass
 
 
-OBSERVATION_SPACE = Dict(
+OBSERVATION_SPACE = spaces.Dict(
     {
         "persistent_state": components.PersistentStateObs.space(),
         "combat_state": components.CombatObs.space(),
@@ -18,6 +21,7 @@ OBSERVATION_SPACE = Dict(
         "event_state": components.EventStateObs.space(),
         # TODO: Possibly have Discrete space telling AI what screen it's on
         # (e.g. screen type)
+        "valid_action_mask": spaces.MultiBinary(len(actions.ACTIONS)),
     }
 )
 
@@ -94,7 +98,17 @@ class Observation:
     def stable(self) -> bool:
         return self.state["ready_for_command"]
 
+    @functools.cached_property
+    def valid_actions(self) -> list[actions.Action]:
+        # avoid circular import
+        from gym_sts.envs.action_validation import get_valid
+        return get_valid(self)
+
     def serialize(self) -> dict:
+        valid_action_mask = [False] * len(actions.ACTIONS)
+        for action in self.valid_actions:
+            valid_action_mask[action._id] = True
+
         return {
             "persistent_state": self.persistent_state.serialize(),
             "combat_state": self.combat_state.serialize(),
@@ -103,4 +117,5 @@ class Observation:
             "card_reward_state": self.card_reward_state.serialize(),
             "combat_reward_state": self.combat_reward_state.serialize(),
             "event_state": self.event_state.serialize(),
+            "valid_action_mask": valid_action_mask,
         }
