@@ -31,7 +31,7 @@ def validate_choose(action: actions.Choose, observation: Observation) -> bool:
         return False
 
     if observation.in_combat:
-        if observation.screen_type in ["GRID", "HAND_SELECT"]:
+        if observation.screen_type in ["CARD_REWARD", "GRID", "HAND_SELECT"]:
             return _validate_choice(action, observation)
         else:
             # TODO determine if there are any other choices that could
@@ -122,9 +122,7 @@ def _validate_potion(
     return getattr(potion, prop)
 
 
-def validate_use_potion(
-    action: actions.UsePotion, observation: Observation
-) -> bool:
+def validate_use_potion(action: actions.UsePotion, observation: Observation) -> bool:
     if not _validate_potion(action, observation, "can_use"):
         return False
 
@@ -189,6 +187,7 @@ def validate(action: actions.Action, observation: Observation) -> bool:
         return validate_play(action, observation)
 
     raise ValueError("Unrecognized action type")
+
 
 def get_valid(observation: Observation):
     # Note: this method is rather inefficient. We could instead generate the

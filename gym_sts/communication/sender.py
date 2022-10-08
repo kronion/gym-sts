@@ -47,3 +47,6 @@ class Sender:
         """
 
         self._send_message("STATE")
+
+    def send_basemod(self, command: str) -> None:
+        self._send_message(f"BASEMOD {command}")
