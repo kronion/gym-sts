@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 import functools
 
 from gym import spaces
@@ -26,7 +27,12 @@ OBSERVATION_SPACE = spaces.Dict(
 )
 
 
+@dataclass
 class Observation:
+    persistent_state: components.PersistentStateObs
+    combat_state: components.CombatObs
+    shop_
+
     def __init__(self, state: dict):
         self.persistent_state = components.PersistentStateObs(state)
         self.combat_state = components.CombatObs(state)

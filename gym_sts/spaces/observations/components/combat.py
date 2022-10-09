@@ -1,4 +1,6 @@
+from dataclasses import dataclass, field
 from typing import Optional
+from pydantic import BaseModel
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
@@ -20,7 +22,9 @@ def _generate_enemy_space():
     )
 
 
+@dataclass
 class CombatObs(ObsComponent):
+
     def __init__(self, state: dict):
         # Sane defaults
         self.turn = 0
@@ -72,8 +76,8 @@ class CombatObs(ObsComponent):
                     self.max_selects = screen_state["max_cards"]
                     self.can_pick_zero = screen_state["can_pick_zero"]
 
-    @staticmethod
-    def space():
+    @classmethod
+    def space(cls):
         return Dict(
             {
                 "turn": MultiBinary(constants.LOG_MAX_TURN),

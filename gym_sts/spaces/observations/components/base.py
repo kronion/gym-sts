@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractclassmethod
 
+import gym
 
 class ObsComponent(ABC):
     @abstractmethod
     def serialize(self):
-        raise NotImplementedError("Not implemented")
+        """Turns this component into a gym-compatible datastructure."""
 
-    @staticmethod
-    @abstractmethod
-    def space():
-        raise NotImplementedError("Not implemented")
+    @abstractclassmethod
+    def space(cls) -> gym.Space:
+        """The gym space for this component type."""

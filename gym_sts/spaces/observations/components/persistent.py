@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from gym.spaces import Dict, MultiBinary, MultiDiscrete
 from pydantic import parse_obj_as
 
@@ -8,19 +10,22 @@ from .base import ObsComponent
 from .map import MapObs
 
 
+@dataclass
 class PersistentStateObs(ObsComponent):
-    def __init__(self, state: dict):
-        # Sane defaults
-        self.floor = 0
-        self.hp = 0
-        self.max_hp = 0
-        self.gold = 0
-        self.potions = []
-        self.relics = []
-        self.deck = []
-        self.keys = {}
-        self.map = MapObs()
+    # Sane defaults
+    floor: int = 0
+    hp: int = 0
+    max_hp: int = 0
+    gold: int = 0
+    potions: list[types.Potion] = field(default_factory=list)
+    relics: list[types.Relic] = field(default_factory=list)
+    deck: list[types.Card] = field(default_factory=list)
+    keys: dict = field(default_factory=dict)
+    map: MapObs = field(default_factory=MapObs)
 
+    # def from_state(state: dict) -> "PersistentStateObs":
+        # self = PersistentStateObs()
+    def __init__(self, state: dict):
         if "game_state" in state:
             game_state = state["game_state"]
             self.floor = game_state["floor"]
@@ -35,8 +40,10 @@ class PersistentStateObs(ObsComponent):
             if "keys" in game_state:
                 self.keys = game_state["keys"]
 
-    @staticmethod
-    def space():
+        return self
+
+    @classmethod
+    def space(cls):
         return Dict(
             {
                 "health": spaces.generate_health_space(),

@@ -7,8 +7,6 @@ python -m ipdb -c c gym_sts/test_valid_actions.py
 
 import argparse
 import pickle
-import random
-import time
 
 from gym_sts.envs.action_validation import validate
 from gym_sts.envs.base import SlayTheSpireGymEnv
@@ -25,77 +23,49 @@ def main():
     parser.add_argument("--runtime", default=30, type=int)
     parser.add_argument("--allow_invalid", action="store_true")
     parser.add_argument("--screenshots", action="store_true")
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--dump_history", type=str, default=None)
+    parser.add_argument("--history", type=str, required=True)
     args = parser.parse_args()
+
+    with open(args.history, 'rb') as f:
+        history: History = pickle.load(f)
+
+    assert len(history.states) == len(history.actions) + 1
 
     if args.build_image:
         SlayTheSpireGymEnv.build_image()
     env = SlayTheSpireGymEnv(
         args.lib_dir, args.mods_dir, args.out_dir, headless=args.headless
     )
-    env.reset(seed=args.seed)
-    rng = random.Random(args.seed)
-
-    if args.dump_history:
-        history = History(seed=args.seed, states=[], actions=[])
-
-    valid_choices = [True]
-    if args.allow_invalid:
-        valid_choices.append(False)
+    seed = history.seed
+    env.reset(seed=seed)
 
     num_steps = 0
-    start_time = time.perf_counter()
 
-    while True:
+    for state, action in zip(history.states, history.actions):
         if args.screenshots:
             env.screenshot(f"frame{num_steps:03d}.png")
 
-        last_obs = env.observation_cache.get()
-        assert last_obs is not None
-        print(last_obs.screen_type)
-        history.states.append(last_obs)
+        obs = env.observation_cache.get()
+        assert obs == state
+        assert validate(action, obs)
 
-        want_valid = rng.choice(valid_choices)
-
-        actions = [
-            action for action in ACTIONS if validate(action, last_obs) == want_valid
-        ]
-
-        if len(actions) == 0:
-            raise ValueError("No %svalid actions!" % ("" if want_valid else "in"))
-
-        action = rng.choice(actions)
         print(action)
-        history.actions.append(action)
         try:
             _, _, done, info = env.step(action._id)
         except TimeoutError as e:
-            run_time = time.perf_counter() - start_time
-            print(f"Error on step {num_steps} after {run_time} seconds.")
             print(e)
             if args.headless:
                 env.screenshot("error.png")
             raise e
-
-        assert info["had_error"] != want_valid
 
         if done:
             print("RESET")
             env.reset()
 
         num_steps += 1
-        run_time = time.perf_counter() - start_time
-        if run_time >= args.runtime:
-            break
 
-    fps = num_steps / run_time
-    print(f"fps: {fps}")
-
-    history.states.append(env.observation_cache.get())
-
-    with open(args.dump_history, "wb") as f:
-        pickle.dump(history, f)
+    obs = env.observation_cache.get()
+    assert history.states[-1] == obs
 
 
 if __name__ == "__main__":
