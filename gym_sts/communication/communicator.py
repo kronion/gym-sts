@@ -112,3 +112,12 @@ class Communicator:
         self.sender.send_basemod(command)
         state = self.receiver.receive_game_state()
         return Observation(state)
+
+    def render(self, render: bool) -> None:
+        """
+        Toggle whether or not the game should render to the screen.
+
+        Note that this command does not return a state response.
+        """
+
+        self.sender.send_render(render)
