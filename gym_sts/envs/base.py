@@ -29,6 +29,7 @@ CONTAINER_MODSDIR = "/game/mods"
 class StSError(Exception):
     """General class of StS exceptions."""
 
+
 class SlayTheSpireGymEnv(gym.Env):
     def __init__(
         self,
@@ -119,6 +120,23 @@ class SlayTheSpireGymEnv(gym.Env):
             f.write(f"command={command}\n")
             f.write("runAtGameStart=true\n")
 
+    def _generate_superfastmode_config(self) -> None:
+        """
+        Create the config file for SuperFastMode.
+
+        WARNING: This function will silently overwrite any existing config file.
+        """
+
+        config_file = pathlib.Path(
+            "~/.config/ModTheSpire/SuperFastMode/SuperFastModeConfig.properties"
+        ).expanduser()
+
+        with config_file.open(mode="w") as f:
+            f.write(
+                "isDeltaMultiplied=true\ndeltaMultiplier=100.0\n"
+                "EXISTS=YES INDEED I EXIST\nisInstantLerp=true\n"
+            )
+
     def _run_container(self) -> None:
         print("Starting STS in Docker container")
         self.client = docker.from_env()
@@ -157,7 +175,11 @@ class SlayTheSpireGymEnv(gym.Env):
         preferences = constants.PROJECT_ROOT / "build" / "preferences"
         shutil.copytree(str(preferences), "tmp/preferences", dirs_exist_ok=True)
 
+        displayconfig_path = constants.PROJECT_ROOT / "build" / "info.displayconfig"
+        shutil.copy(str(displayconfig_path), "tmp/info.displayconfig")
+
         self._generate_communication_mod_config()
+        self._generate_superfastmode_config()
 
         os.chdir("tmp")
 
