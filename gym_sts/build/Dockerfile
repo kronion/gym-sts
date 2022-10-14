@@ -33,6 +33,9 @@ RUN ln -s /etc/alternatives/java  # modthespire uses the java JRE included with 
 WORKDIR /root/.config/ModTheSpire/CommunicationMod
 COPY communication_mod.config.properties config.properties
 
+WORKDIR /root/.config/ModTheSpire/SuperFastMode
+COPY superfastmode.config.properties SuperFastModeConfig.properties
+
 WORKDIR /game
 COPY pipe_to_host.sh pipe_to_host.sh
 
