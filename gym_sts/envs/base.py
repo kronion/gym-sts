@@ -399,6 +399,7 @@ class SlayTheSpireGymEnv(gym.Env):
             raise NotImplementedError("screenshot only works with headless=True")
 
         # Briefly enable animation ahead of screenshotting
+        prev_setting = self.animate
         if not self.animate:
             self.set_animate(True)
 
@@ -409,7 +410,7 @@ class SlayTheSpireGymEnv(gym.Env):
         )
 
         # Return animation state to whatever it was before
-        self.set_animate(self.animate)
+        self.set_animate(prev_setting)
 
         if exit_code != 0:
             raise RuntimeError(

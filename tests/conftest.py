@@ -13,6 +13,11 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.fixture
+def headless(request):
+    return request.config.getoption("headless")
+
+
 # Because starting the game is time-consuming, we scope this fixture to the entire
 # test session, i.e. the same game is used across all tests. This means each test
 # must call `env.reset()` in order to ensure isolation from previous tests.
