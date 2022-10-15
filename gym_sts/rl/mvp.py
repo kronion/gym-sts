@@ -2,8 +2,9 @@
 import os
 
 import click
+import ray
 from gym import spaces
-from ray import tune
+from ray import air, tune
 
 # from ray.rllib import utils
 from ray.rllib.algorithms import ppo
@@ -38,6 +39,9 @@ class Env(base.SlayTheSpireGymEnv):
 @click.argument("out")
 @click.option("--headless/--headful", default=True)
 def main(lib, mods, out, headless):
+
+    ray.init(address=None)
+
     # we need abspath's here because the cwd will be different later
     if out is not None:
         output_dir = os.path.abspath(out)
@@ -48,7 +52,7 @@ def main(lib, mods, out, headless):
         "output_dir": output_dir,
         "headless": headless,
         # TODO: Add as command line arg
-        "render": True,
+        "animate": True,
     }
 
     ppo_config = {
@@ -60,9 +64,9 @@ def main(lib, mods, out, headless):
         "eager_tracing": True,
         "rollout_fragment_length": 32,
         "train_batch_size": 256,
-        "horizon": 64,  # just for reporting some rewards
-        "soft_horizon": True,
-        "no_done_at_end": True,
+        # "horizon": 64,  # just for reporting some rewards
+        # "soft_horizon": True,
+        # "no_done_at_end": True,
         "model": {
             "custom_model": "masked",
         },
@@ -80,10 +84,24 @@ def main(lib, mods, out, headless):
     # while True:
     #   algo.train()
 
-    tune.run(
+    # tune.run(
+    #     ppo.PPO,
+    #     config=ppo_config,
+    # )
+
+    tuner = tune.Tuner(
         ppo.PPO,
-        config=ppo_config,
+        param_space=ppo_config,
+        run_config=air.RunConfig(
+            name="SlayTheSpireRL",
+            checkpoint_config=air.config.CheckpointConfig(
+                # Only keep this many checkpoints.
+                num_to_keep=5,
+                checkpoint_frequency=1,
+            ),
+        ),
     )
+    tuner.fit()
 
 
 if __name__ == "__main__":
