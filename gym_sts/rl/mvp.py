@@ -1,17 +1,18 @@
 """Run with rllib."""
 import os
-import typing as tp
 
 from absl import app, flags
 from gym import spaces
+from ray import tune
 
-# from ray import tune
 # from ray.rllib import utils
 from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 
 from gym_sts.envs import base
 from gym_sts.rl import models_tf
+from gym_sts.spaces.observations import OBSERVATION_SPACE
+
 
 def check_rllib_bug(space: spaces.Space):
     # rllib special-cases certain spaces, which we don't want
@@ -21,7 +22,8 @@ def check_rllib_bug(space: spaces.Space):
     elif not isinstance(space, (spaces.Discrete, spaces.MultiDiscrete)):
         assert space.shape != preprocessors.ATARI_RAM_OBS_SHAPE
 
-check_rllib_bug(base.ObservationWithMask.space())
+
+check_rllib_bug(OBSERVATION_SPACE)
 
 models_tf.register()
 
@@ -29,6 +31,7 @@ _LIB = flags.DEFINE_string("lib", None, "lib dir", required=True)
 _MODS = flags.DEFINE_string("mods", None, "mods dir", required=True)
 _OUT = flags.DEFINE_string("out", None, "out dir", required=False)
 _HEADLESS = flags.DEFINE_bool("headless", True, "run headless")
+
 
 class Env(base.SlayTheSpireGymEnv):
     def __init__(self, cfg: dict):
@@ -73,14 +76,14 @@ def main(_):
     # print('env check done')
 
     # take a manual step
-    algo = ppo.PPO(ppo_config)
-    while True:
-      algo.train()
+    # algo = ppo.PPO(ppo_config)
+    # while True:
+    #  algo.train()
 
-    # tune.run(
-    #     ppo.PPO,
-    #     config=ppo_config,
-    # )
+    tune.run(
+        ppo.PPO,
+        config=ppo_config,
+    )
 
 
 if __name__ == "__main__":
