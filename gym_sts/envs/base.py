@@ -37,6 +37,7 @@ class SlayTheSpireGymEnv(gym.Env):
         mods_dir: str,
         output_dir: Optional[str] = None,
         headless: bool = False,
+        render: bool = False,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -93,6 +94,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_space = OBSERVATION_SPACE
 
         self.observation_cache: Cache[Observation] = Cache()
+
+        self.communicator.render(render)
 
         atexit.register(self.close)
 

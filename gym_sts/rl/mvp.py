@@ -49,6 +49,8 @@ def main(_):
         "mods_dir": os.path.abspath(_MODS.value),
         "output_dir": output_dir,
         "headless": _HEADLESS.value,
+        # TODO: Add as command line arg
+        "render": True,
     }
 
     ppo_config = {
