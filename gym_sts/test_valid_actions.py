@@ -21,6 +21,7 @@ def main():
     parser.add_argument("out_dir")
     parser.add_argument("--build_image", action="store_true")
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--render", action="store_true")
     parser.add_argument("--runtime", default=30, type=int)
     parser.add_argument("--allow_invalid", action="store_true")
     parser.add_argument("--screenshots", action="store_true")
@@ -31,6 +32,7 @@ def main():
     env = SlayTheSpireGymEnv(
         args.lib_dir, args.mods_dir, args.out_dir, headless=args.headless
     )
+    env.communicator.render(args.render)
     env.reset(seed=42)
     rng = random.Random(42)
 
