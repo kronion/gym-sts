@@ -37,6 +37,7 @@ class SlayTheSpireGymEnv(gym.Env):
         mods_dir: str,
         output_dir: Optional[str] = None,
         headless: bool = False,
+        animate: bool = True,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -48,6 +49,9 @@ class SlayTheSpireGymEnv(gym.Env):
                 If None, a temporary directory will be created and later cleaned up.
             headless: If True, run the game in a headless Docker container. Otherwise,
                 run the game directly on the host (presumably with a visible interface).
+            animate: If True, the game UI will update as normal, which costs CPU time.
+                If False, the game will stop rendering frames, causing the UI to appear
+                frozen in place, but saving CPU.
         """
 
         self.lib_dir = pathlib.Path(lib_dir).resolve()
@@ -76,7 +80,11 @@ class SlayTheSpireGymEnv(gym.Env):
         self.communicator = Communicator(self.input_path, self.output_path)
         print("Opened pipe files.")
 
-        self.ready()
+        self._ready()
+
+        # Animation can be toggled at any time using set_animate()
+        self.animate = animate
+        self.communicator.render(self.animate)
 
         # The seed used to initialize the env's PRNG, which is used to
         # generate the seeds used by the game itself.
@@ -209,6 +217,10 @@ class SlayTheSpireGymEnv(gym.Env):
         obs = self.communicator.resign()
         assert obs.screen_type == "MAIN_MENU"
 
+    def set_animate(self, animate: bool) -> None:
+        self.animate = animate
+        self.communicator.render(self.animate)
+
     def observe(self, add_to_cache: bool = False) -> Observation:
         """
         Fetches the latest game state and returns its observation.
@@ -243,11 +255,9 @@ class SlayTheSpireGymEnv(gym.Env):
 
         return obs
 
-    def ready(self):
+    def _ready(self):
         print("Signalling READY")
         self.start_message = self.communicator.ready()
-        # print("Waiting for game to be stable...")
-        # self.start_message = self.receiver.receive_game_state()
 
     def reset(
         self,
