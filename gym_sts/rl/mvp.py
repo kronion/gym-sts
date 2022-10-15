@@ -1,7 +1,7 @@
 """Run with rllib."""
 import os
 
-from absl import app, flags
+import click
 from gym import spaces
 from ray import tune
 
@@ -11,7 +11,6 @@ from ray.rllib.models import preprocessors
 
 from gym_sts.envs import base
 from gym_sts.rl import models_tf
-from gym_sts.spaces.observations import OBSERVATION_SPACE
 
 
 def check_rllib_bug(space: spaces.Space):
@@ -23,14 +22,9 @@ def check_rllib_bug(space: spaces.Space):
         assert space.shape != preprocessors.ATARI_RAM_OBS_SHAPE
 
 
-check_rllib_bug(OBSERVATION_SPACE)
+check_rllib_bug(base.OBSERVATION_SPACE)
 
 models_tf.register()
-
-_LIB = flags.DEFINE_string("lib", None, "lib dir", required=True)
-_MODS = flags.DEFINE_string("mods", None, "mods dir", required=True)
-_OUT = flags.DEFINE_string("out", None, "out dir", required=False)
-_HEADLESS = flags.DEFINE_bool("headless", True, "run headless")
 
 
 class Env(base.SlayTheSpireGymEnv):
@@ -38,17 +32,21 @@ class Env(base.SlayTheSpireGymEnv):
         super().__init__(**cfg)
 
 
-def main(_):
+@click.command()
+@click.argument("lib")
+@click.argument("mods")
+@click.argument("out")
+@click.option("--headless/--headful", default=True)
+def main(lib, mods, out, headless):
     # we need abspath's here because the cwd will be different later
-    output_dir = _OUT.value
-    if output_dir is not None:
-        output_dir = os.path.abspath(output_dir)
+    if out is not None:
+        output_dir = os.path.abspath(out)
 
     env_config = {
-        "lib_dir": os.path.abspath(_LIB.value),
-        "mods_dir": os.path.abspath(_MODS.value),
+        "lib_dir": os.path.abspath(lib),
+        "mods_dir": os.path.abspath(mods),
         "output_dir": output_dir,
-        "headless": _HEADLESS.value,
+        "headless": headless,
         # TODO: Add as command line arg
         "render": True,
     }
@@ -80,7 +78,7 @@ def main(_):
     # take a manual step
     # algo = ppo.PPO(ppo_config)
     # while True:
-    #  algo.train()
+    #   algo.train()
 
     tune.run(
         ppo.PPO,
@@ -89,4 +87,4 @@ def main(_):
 
 
 if __name__ == "__main__":
-    app.run(main)
+    main()
