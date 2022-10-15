@@ -398,11 +398,19 @@ class SlayTheSpireGymEnv(gym.Env):
         if self.container is None:
             raise NotImplementedError("screenshot only works with headless=True")
 
+        # Briefly enable animation ahead of screenshotting
+        if not self.animate:
+            self.set_animate(True)
+
         file_path = pathlib.Path(CONTAINER_OUTDIR) / filename
         exit_code, output = self.container.exec_run(
             cmd=["scrot", str(file_path)],
             environment={"DISPLAY": ":99", "XAUTHORITY": "/tmp/sts.xauth"},
         )
+
+        # Return animation state to whatever it was before
+        self.set_animate(self.animate)
+
         if exit_code != 0:
             raise RuntimeError(
                 "Failed to take a screenshot. Output: " + output.decode("utf-8")
