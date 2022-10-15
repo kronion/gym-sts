@@ -50,3 +50,6 @@ class Sender:
 
     def send_basemod(self, command: str) -> None:
         self._send_message(f"BASEMOD {command}")
+
+    def send_render(self, render: bool) -> None:
+        self._send_message(f"RENDER {render}")
