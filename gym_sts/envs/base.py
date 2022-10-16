@@ -1,4 +1,5 @@
 import atexit
+import datetime
 import logging
 import os
 import pathlib
@@ -13,7 +14,7 @@ import docker
 import gym
 from docker.models.containers import Container
 
-from gym_sts import constants
+from gym_sts import constants, exceptions
 from gym_sts.communication import Communicator
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
@@ -24,10 +25,6 @@ from .utils import Cache, SeedHelpers, obs_value
 CONTAINER_OUTDIR = "/game/out"
 CONTAINER_LIBDIR = "/game/lib"
 CONTAINER_MODSDIR = "/game/mods"
-
-
-class StSError(Exception):
-    """General class of StS exceptions."""
 
 
 class SlayTheSpireGymEnv(gym.Env):
@@ -65,6 +62,10 @@ class SlayTheSpireGymEnv(gym.Env):
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
         self.logfile_path = self.output_dir / "stderr.log"
+
+        # Create screenshots directory
+        self.screenshots_dir = pathlib.Path(CONTAINER_OUTDIR) / "screenshots"
+        (self.output_dir / "screenshots").mkdir(exist_ok=True)
 
         self.logfile = self.logfile_path.open("w")
 
@@ -350,7 +351,14 @@ class SlayTheSpireGymEnv(gym.Env):
         action = ACTIONS[action_id]
         is_valid = validate(action, prev_obs)
 
-        obs = self.communicator._manual_command(action.to_command())
+        try:
+            obs = self.communicator._manual_command(action.to_command())
+        except exceptions.StSError as e:
+            print(prev_obs)
+            print(action_id)
+            now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.screenshot(f"error_{now}.png")
+            raise e
 
         if obs.has_error == is_valid:
             # indicates a mismatch in our action validity checking
@@ -377,7 +385,7 @@ class SlayTheSpireGymEnv(gym.Env):
                     success = True
                     break
             if not success:
-                raise StSError("No valid actions.")
+                raise exceptions.StSError("No valid actions.")
 
             reward = obs_value(obs) - obs_value(prev_obs)
             self.observation_cache.append(obs)
@@ -395,11 +403,21 @@ class SlayTheSpireGymEnv(gym.Env):
         """
         if self.container is None:
             raise NotImplementedError("screenshot only works with headless=True")
-        file_path = pathlib.Path(CONTAINER_OUTDIR) / filename
+
+        # Briefly enable animation ahead of screenshotting
+        prev_setting = self.animate
+        if not self.animate:
+            self.set_animate(True)
+
+        file_path = self.screenshots_dir / filename
         exit_code, output = self.container.exec_run(
             cmd=["scrot", str(file_path)],
             environment={"DISPLAY": ":99", "XAUTHORITY": "/tmp/sts.xauth"},
         )
+
+        # Return animation state to whatever it was before
+        self.set_animate(prev_setting)
+
         if exit_code != 0:
             raise RuntimeError(
                 "Failed to take a screenshot. Output: " + output.decode("utf-8")
