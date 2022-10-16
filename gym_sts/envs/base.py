@@ -1,4 +1,5 @@
 import atexit
+import datetime
 import logging
 import os
 import pathlib
@@ -61,6 +62,10 @@ class SlayTheSpireGymEnv(gym.Env):
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
         self.logfile_path = self.output_dir / "stderr.log"
+
+        # Create screenshots directory
+        self.screenshots_dir = pathlib.Path(CONTAINER_OUTDIR) / "screenshots"
+        (self.output_dir / "screenshots").mkdir(exist_ok=True)
 
         self.logfile = self.logfile_path.open("w")
 
@@ -351,7 +356,8 @@ class SlayTheSpireGymEnv(gym.Env):
         except exceptions.StSError as e:
             print(prev_obs)
             print(action_id)
-            self.screenshot("error.png")
+            now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            self.screenshot(f"error_{now}.png")
             raise e
 
         if obs.has_error == is_valid:
@@ -403,7 +409,7 @@ class SlayTheSpireGymEnv(gym.Env):
         if not self.animate:
             self.set_animate(True)
 
-        file_path = pathlib.Path(CONTAINER_OUTDIR) / filename
+        file_path = self.screenshots_dir / filename
         exit_code, output = self.container.exec_run(
             cmd=["scrot", str(file_path)],
             environment={"DISPLAY": ":99", "XAUTHORITY": "/tmp/sts.xauth"},
