@@ -38,8 +38,9 @@ class Env(base.SlayTheSpireGymEnv):
 @click.argument("mods")
 @click.argument("out")
 @click.option("--headless/--headful", default=True)
+@click.option("--animate/--no-animate", default=False)
 @click.option("--restore/--no-restore", default=False)
-def main(lib, mods, out, headless, restore):
+def main(lib, mods, out, headless, animate, restore):
 
     ray.init(address=None)
 
@@ -52,8 +53,7 @@ def main(lib, mods, out, headless, restore):
         "mods_dir": os.path.abspath(mods),
         "output_dir": output_dir,
         "headless": headless,
-        # TODO: Add as command line arg
-        "animate": True,
+        "animate": animate,
     }
 
     ppo_config = {
@@ -63,8 +63,8 @@ def main(lib, mods, out, headless, restore):
         # "framework": "torch",
         "framework": "tf2",
         "eager_tracing": True,
-        "rollout_fragment_length": 32,
-        "train_batch_size": 256,
+        "rollout_fragment_length": 128,
+        "train_batch_size": 1024,
         # "horizon": 64,  # just for reporting some rewards
         # "soft_horizon": True,
         # "no_done_at_end": True,
@@ -93,7 +93,7 @@ def main(lib, mods, out, headless, restore):
     if restore:
         tuner = tune.Tuner.restore(
             "~/ray_results/SlayTheSpireRL",
-            resume_unfinished=False,
+            resume_unfinished=True,
             resume_errored=True,
             restart_errored=False,
         )
@@ -108,7 +108,7 @@ def main(lib, mods, out, headless, restore):
                 ),
                 checkpoint_config=air.config.CheckpointConfig(
                     # Only keep this many checkpoints.
-                    num_to_keep=5,
+                    num_to_keep=2,
                     checkpoint_frequency=1,
                 ),
             ),
