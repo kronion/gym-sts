@@ -38,7 +38,8 @@ class Env(base.SlayTheSpireGymEnv):
 @click.argument("mods")
 @click.argument("out")
 @click.option("--headless/--headful", default=True)
-def main(lib, mods, out, headless):
+@click.option("--restore/--no-restore", default=False)
+def main(lib, mods, out, headless, restore):
 
     ray.init(address=None)
 
@@ -89,18 +90,30 @@ def main(lib, mods, out, headless):
     #     config=ppo_config,
     # )
 
-    tuner = tune.Tuner(
-        ppo.PPO,
-        param_space=ppo_config,
-        run_config=air.RunConfig(
-            name="SlayTheSpireRL",
-            checkpoint_config=air.config.CheckpointConfig(
-                # Only keep this many checkpoints.
-                num_to_keep=5,
-                checkpoint_frequency=1,
+    if restore:
+        tuner = tune.Tuner.restore(
+            "~/ray_results/SlayTheSpireRL",
+            resume_unfinished=False,
+            resume_errored=True,
+            restart_errored=False,
+        )
+    else:
+        tuner = tune.Tuner(
+            ppo.PPO,
+            param_space=ppo_config,
+            run_config=air.RunConfig(
+                name="SlayTheSpireRL",
+                sync_config=tune.SyncConfig(
+                    syncer=None  # Disable syncing, we store checkpoints locally
+                ),
+                checkpoint_config=air.config.CheckpointConfig(
+                    # Only keep this many checkpoints.
+                    num_to_keep=5,
+                    checkpoint_frequency=1,
+                ),
             ),
-        ),
-    )
+        )
+
     tuner.fit()
 
 

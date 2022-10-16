@@ -355,9 +355,10 @@ class SlayTheSpireGymEnv(gym.Env):
         if obs.has_error == is_valid:
             # indicates a mismatch in our action validity checking
             logging.error(
-                "Action was %svalid, but obs %s an error.",
+                "Action was %svalid, but obs %s an error. Error: %s",
                 "" if is_valid else "not ",
                 "had" if obs.has_error else "did not have",
+                obs.state["error"],
             )
 
         had_error = obs.has_error
