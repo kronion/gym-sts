@@ -63,3 +63,16 @@ def test_enemy_attack_serialization(env):
     new_damage = gremlin_nob["attack"]["damage"]
     expected_damage = utils.to_binary_array(damage + 2, constants.LOG_MAX_ATTACK)
     assert new_damage == expected_damage
+
+    # Runic Dome doesn't cause an error
+    env.communicator.basemod("relic add Runic_Dome")
+    env.communicator.basemod("fight Looter")
+    obs = env.observe(add_to_cache=True)
+    serialization = obs.combat_state.serialize()
+    enemies = serialization["enemies"]
+    assert len(enemies) > 0
+    looter = enemies[0]
+    damage = utils.from_binary_array(looter["attack"]["damage"])
+    times = utils.from_binary_array(looter["attack"]["times"])
+    assert damage == 0
+    assert times == 0
