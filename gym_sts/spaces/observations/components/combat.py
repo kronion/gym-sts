@@ -99,7 +99,13 @@ class CombatObs(ObsComponent):
 
     def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
         if enemy is not None:
-            damage = max(enemy["move_adjusted_damage"], 0)
+            damage = 0
+            times = 0
+
+            # These may not be present if the player has runic dome
+            if "move_adjusted_damage" in enemy and "move_hits" in enemy:
+                damage = max(enemy["move_adjusted_damage"], 0)
+                times = enemy["move_hits"]
 
             serialized = {
                 "id": constants.ALL_MONSTER_TYPES.index(enemy["id"]),
@@ -107,7 +113,7 @@ class CombatObs(ObsComponent):
                 "attack": {
                     "damage": utils.to_binary_array(damage, constants.LOG_MAX_ATTACK),
                     "times": utils.to_binary_array(
-                        enemy["move_hits"], constants.LOG_MAX_ATTACK_TIMES
+                        times, constants.LOG_MAX_ATTACK_TIMES
                     ),
                 },
                 "block": utils.to_binary_array(enemy["block"], constants.LOG_MAX_BLOCK),
