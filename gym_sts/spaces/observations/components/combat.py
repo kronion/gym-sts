@@ -121,8 +121,8 @@ class CombatObs(ObsComponent):
                 "id": 0,
                 "intent": 0,
                 "attack": {
-                    "damage": 0,
-                    "times": 0,
+                    "damage": utils.to_binary_array(0, constants.LOG_MAX_ATTACK),
+                    "times": utils.to_binary_array(0, constants.LOG_MAX_ATTACK_TIMES),
                 },
                 "block": utils.to_binary_array(0, constants.LOG_MAX_BLOCK),
                 "effects": serializers.serialize_effects([]),
