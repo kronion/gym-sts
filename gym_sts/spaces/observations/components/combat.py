@@ -13,6 +13,12 @@ def _generate_enemy_space():
         {
             "id": Discrete(constants.NUM_MONSTER_TYPES),
             "intent": Discrete(constants.NUM_INTENTS),
+            "attack": Dict(
+                {
+                    "damage": MultiBinary(constants.LOG_MAX_ATTACK),
+                    "times": MultiBinary(constants.LOG_MAX_ATTACK_TIMES),
+                }
+            ),
             "block": MultiBinary(constants.LOG_MAX_BLOCK),
             "effects": spaces.generate_effect_space(),
             "health": spaces.generate_health_space(),
@@ -93,9 +99,23 @@ class CombatObs(ObsComponent):
 
     def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
         if enemy is not None:
+            damage = 0
+            times = 0
+
+            # These may not be present if the player has runic dome
+            if "move_adjusted_damage" in enemy and "move_hits" in enemy:
+                damage = max(enemy["move_adjusted_damage"], 0)
+                times = enemy["move_hits"]
+
             serialized = {
                 "id": constants.ALL_MONSTER_TYPES.index(enemy["id"]),
                 "intent": constants.ALL_INTENTS.index(enemy["intent"]),
+                "attack": {
+                    "damage": utils.to_binary_array(damage, constants.LOG_MAX_ATTACK),
+                    "times": utils.to_binary_array(
+                        times, constants.LOG_MAX_ATTACK_TIMES
+                    ),
+                },
                 "block": utils.to_binary_array(enemy["block"], constants.LOG_MAX_BLOCK),
                 "effects": serializers.serialize_effects(enemy["powers"]),
                 "health": serializers.serialize_health(
@@ -106,6 +126,10 @@ class CombatObs(ObsComponent):
             serialized = {
                 "id": 0,
                 "intent": 0,
+                "attack": {
+                    "damage": utils.to_binary_array(0, constants.LOG_MAX_ATTACK),
+                    "times": utils.to_binary_array(0, constants.LOG_MAX_ATTACK_TIMES),
+                },
                 "block": utils.to_binary_array(0, constants.LOG_MAX_BLOCK),
                 "effects": serializers.serialize_effects([]),
                 "health": serializers.serialize_health(0, 0),
