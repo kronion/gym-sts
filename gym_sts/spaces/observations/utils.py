@@ -15,3 +15,16 @@ def to_binary_array(n: int, digits: int) -> list[int]:
         idx += 1
 
     return array
+
+
+def from_binary_array(array: list[int]) -> int:
+    total = 0
+    place_value = 1
+
+    for digit in array:
+        if digit == 1:
+            total += place_value
+
+        place_value *= 2
+
+    return total
