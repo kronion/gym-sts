@@ -40,6 +40,7 @@ def validate_choose(action: actions.Choose, observation: Observation) -> bool:
             print("NOT IMPLEMENTED")
             return False
     elif observation.screen_type in [
+        "BOSS_REWARD",
         "CARD_REWARD",
         "CHEST",
         "COMBAT_REWARD",
