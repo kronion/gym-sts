@@ -1088,7 +1088,7 @@ ALL_KEYS = [
 NUM_KEYS = len(ALL_KEYS)
 
 # I don't know if 15 is enough, I know the card flipping game has at least 12
-NUM_CHOICES = 15
+NUM_CHOICES = 16
 
 # I count 179 relics on the STS wiki, including the Circlet
 NUM_RELICS = len(ALL_RELICS)
