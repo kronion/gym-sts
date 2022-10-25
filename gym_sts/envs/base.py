@@ -20,6 +20,7 @@ from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
 from .action_validation import validate
+from .types import ResetParams
 from .utils import Cache, SeedHelpers, obs_value
 
 CONTAINER_OUTDIR = "/game/out"
@@ -35,6 +36,7 @@ class SlayTheSpireGymEnv(gym.Env):
         output_dir: Optional[str] = None,
         headless: bool = False,
         animate: bool = True,
+        reboot_frequency: int = 0,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -72,20 +74,12 @@ class SlayTheSpireGymEnv(gym.Env):
         self.container: Optional[Container] = None
         self.process: Optional[subprocess.Popen] = None
 
-        if headless:
-            self._run_container()
-        else:
-            self._run_locally()
-
-        print("Opening pipe files...")
-        self.communicator = Communicator(self.input_path, self.output_path)
-        print("Opened pipe files.")
-
-        self._ready()
+        self.headless = headless
+        self.reboot_frequency = reboot_frequency
+        self.reset_count = 0
 
         # Animation can be toggled at any time using set_animate()
         self.animate = animate
-        self.communicator.render(self.animate)
 
         # The seed used to initialize the env's PRNG, which is used to
         # generate the seeds used by the game itself.
@@ -282,21 +276,30 @@ class SlayTheSpireGymEnv(gym.Env):
                     If provided, this object will be used to set the env's PRNG. Useful
                     for (re)playing known scenarios. If provided, the seed argument must
                     be None.
+                reboot (bool): Force a full reboot of the game.
         """
 
-        self._end_game()
+        options = options or {}
+        params = ResetParams(seed=seed, return_info=return_info, **options)
 
-        # TODO @kronion: validate options with pydantic
+        if params.reboot:
+            self.reset_count = 0
+        if self.reset_count == 0:
+            self.close()
+            self.start()
+        else:
+            self._end_game()
 
-        if options is not None and "rng_state" in options:
-            if seed is not None:
-                raise ValueError("seed and rng_state cannot both be provided")
-            self.rng_state = options["rng_state"]
-            assert self.rng_state is not None
+        self.reset_count += 1
+        if self.reset_count == self.reboot_frequency:
+            self.reset_count = 0
+
+        if params.rng_state is not None:
+            self.rng_state = params.rng_state
             self.seed = None
             self.prng = random.Random()
             self.prng.setstate(self.rng_state)
-        elif seed is not None:
+        elif params.seed is not None:
             self.seed = seed
             self.rng_state = None
             self.prng = random.Random(seed)
@@ -309,13 +312,13 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.observation_cache.reset()
 
-        if options is not None and "sts_seed" in options:
-            sts_seed = SeedHelpers.validate_seed(options["sts_seed"])
+        if params.sts_seed is not None:
+            sts_seed = SeedHelpers.validate_seed(params.sts_seed)
         else:
             sts_seed = SeedHelpers.make_seed(self.prng)
         self.sts_seed = sts_seed
 
-        obs = self.communicator.start("DEFECT", 0, sts_seed)
+        obs = self.communicator.start("DEFECT", 0, self.sts_seed)
 
         # In my experience the game isn't actually stable here, and we have
         # to wait for a bit before the game actually starts.
@@ -333,7 +336,7 @@ class SlayTheSpireGymEnv(gym.Env):
         assert obs.event_state.event_id == "Neow Event"
         self.observation_cache.append(obs)
 
-        if return_info:
+        if params.return_info:
             info = {
                 "seed": self.seed,
                 "sts_seed": self.sts_seed,
@@ -343,6 +346,19 @@ class SlayTheSpireGymEnv(gym.Env):
             return obs.serialize(), info
         else:
             return obs.serialize()
+
+    def start(self):
+        if self.headless:
+            self._run_container()
+        else:
+            self._run_locally()
+
+        print("Opening pipe files...")
+        self.communicator = Communicator(self.input_path, self.output_path)
+        print("Opened pipe files.")
+
+        self._ready()
+        self.communicator.render(self.animate)
 
     def step(self, action_id: int) -> Tuple[dict, float, bool, dict]:
         prev_obs = self.observation_cache.get()
@@ -440,4 +456,5 @@ class SlayTheSpireGymEnv(gym.Env):
 
         if self.process is not None:
             self.process.terminate()
+            self.process.wait()
             self.process = None
