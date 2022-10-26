@@ -56,6 +56,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self.lib_dir = pathlib.Path(lib_dir).resolve()
         self.mods_dir = pathlib.Path(mods_dir).resolve()
 
+        self._current_dir = pathlib.Path.cwd()
         self._temp_dir = None
         if output_dir is None:
             self._temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
@@ -170,21 +171,25 @@ class SlayTheSpireGymEnv(gym.Env):
         print("Starting STS on the host machine")
 
         # Create a sandbox directory where the subprocess will run
+        tmp_dir = self._current_dir / "tmp"
+
         try:
-            shutil.copytree(str(self.lib_dir), "tmp")
+            shutil.copytree(str(self.lib_dir), str(tmp_dir))
         except FileExistsError:
             pass
-        shutil.copytree(str(self.mods_dir), "tmp/mods", dirs_exist_ok=True)
+        shutil.copytree(str(self.mods_dir), str(tmp_dir / "mods"), dirs_exist_ok=True)
         preferences = constants.PROJECT_ROOT / "build" / "preferences"
-        shutil.copytree(str(preferences), "tmp/preferences", dirs_exist_ok=True)
+        shutil.copytree(
+            str(preferences), str(tmp_dir / "preferences"), dirs_exist_ok=True
+        )
 
         displayconfig_path = constants.PROJECT_ROOT / "build" / "info.displayconfig"
-        shutil.copy(str(displayconfig_path), "tmp/info.displayconfig")
+        shutil.copy(str(displayconfig_path), str(tmp_dir / "info.displayconfig"))
 
         self._generate_communication_mod_config()
         self._generate_superfastmode_config()
 
-        os.chdir("tmp")
+        os.chdir(tmp_dir)
 
         self.process = subprocess.Popen(
             [constants.JAVA_INSTALL, "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
