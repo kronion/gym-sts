@@ -233,6 +233,17 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "fancyflags"
+version = "1.1"
+description = "A Python library for defining dictionary-valued flags."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+absl-py = "*"
+
+[[package]]
 name = "filelock"
 version = "3.8.0"
 description = "A platform independent file lock."
@@ -1568,7 +1579,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9, <3.11"  # Tensorflow requires <3.11
-content-hash = "15c18eedc004f478ae7d49f00de70e2372e43448e8f571379e2ed1121cfc2b23"
+content-hash = "9bbc94e5deace9cea88a1968f7d5956941f363bd07f0b1c46616ffd87323a90c"
 
 [metadata.files]
 absl-py = [
@@ -1766,6 +1777,10 @@ docker = [
 executing = [
     {file = "executing-0.10.0-py2.py3-none-any.whl", hash = "sha256:9c745f80cda11eb22b62cbecf21156491a794eb56ab06f9d286a44e62822b24e"},
     {file = "executing-0.10.0.tar.gz", hash = "sha256:d1cd87c2e371e9966261410c5b3769d6df2f9e4a79a83eebd2662dd3388f9833"},
+]
+fancyflags = [
+    {file = "fancyflags-1.1-py3-none-any.whl", hash = "sha256:a6e05e7ba11afa7a8a4a2d5527fcb87b67fb6756395744bcc3d554b23f437e66"},
+    {file = "fancyflags-1.1.tar.gz", hash = "sha256:fa0b5423de49b93ec8418be0c8506d32b3e56a617bd146b95d56ad024651eec7"},
 ]
 filelock = [
     {file = "filelock-3.8.0-py3-none-any.whl", hash = "sha256:617eb4e5eedc82fc5f47b6d61e4d11cb837c56cb4544e39081099fa17ad109d4"},
