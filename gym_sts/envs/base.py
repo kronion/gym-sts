@@ -254,6 +254,14 @@ class SlayTheSpireGymEnv(gym.Env):
         print("Signalling READY")
         self.start_message = self.communicator.ready()
 
+    def reboot(self) -> None:
+        """
+        Close and reopen the game process. Also works for the initial boot.
+        """
+
+        self.stop()
+        self.start()
+
     def reset(
         self,
         seed: Optional[int] = None,
@@ -285,8 +293,7 @@ class SlayTheSpireGymEnv(gym.Env):
         if params.reboot:
             self.reset_count = 0
         if self.reset_count == 0:
-            self.close()
-            self.start()
+            self.reboot()
         else:
             self._end_game()
 
@@ -347,7 +354,7 @@ class SlayTheSpireGymEnv(gym.Env):
         else:
             return obs.serialize()
 
-    def start(self):
+    def start(self) -> None:
         if self.headless:
             self._run_container()
         else:
@@ -439,16 +446,10 @@ class SlayTheSpireGymEnv(gym.Env):
                 "Failed to take a screenshot. Output: " + output.decode("utf-8")
             )
 
-    def valid_actions(self) -> list[Action]:
-        latest_obs = self.observation_cache.get()
-        if latest_obs is None:
-            raise RuntimeError("Game not started?")
-        return latest_obs.valid_actions
-
-    def close(self):
-        if self._temp_dir is not None:
-            self._temp_dir.cleanup()
-            self._temp_dir = None
+    def stop(self) -> None:
+        """
+        Terminate the current game process.
+        """
 
         if self.container is not None:
             self.container.stop()
@@ -458,3 +459,20 @@ class SlayTheSpireGymEnv(gym.Env):
             self.process.terminate()
             self.process.wait()
             self.process = None
+
+    def valid_actions(self) -> list[Action]:
+        latest_obs = self.observation_cache.get()
+        if latest_obs is None:
+            raise RuntimeError("Game not started?")
+        return latest_obs.valid_actions
+
+    def close(self) -> None:
+        """
+        Stops the env and cleans up temp files
+        """
+
+        self.stop()
+
+        if self._temp_dir is not None:
+            self._temp_dir.cleanup()
+            self._temp_dir = None
