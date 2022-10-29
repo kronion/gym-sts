@@ -41,7 +41,11 @@ ENV = ff.DEFINE_dict(
 
 TUNE = ff.DEFINE_dict(
     "tune",
-    name=ff.String("sts-rl", "Name of the ray experiment"),
+    run=dict(
+        name=ff.String("sts-rl", "Name of the ray experiment"),
+        local_dir=ff.String(None),  # default is ~/ray_results/
+        verbose=ff.Integer(3),
+    ),
     checkpoint_config=dict(
         checkpoint_frequency=ff.Integer(20),
         checkpoint_at_end=ff.Boolean(False),
@@ -56,7 +60,6 @@ TUNE = ff.DEFINE_dict(
         sync_on_checkpoint=ff.Boolean(True),
         sync_period=ff.Integer(300),
     ),
-    verbose=ff.Integer(3),
 )
 
 WANDB = ff.DEFINE_dict(
@@ -64,7 +67,8 @@ WANDB = ff.DEFINE_dict(
     use=ff.Boolean(False),
     entity=ff.String("sts-ai"),
     project=ff.String("sts-rllib"),
-    api_key_file=ff.String("~/.wandb"),
+    api_key_file=ff.String(None),
+    api_key=ff.String(None),
     log_config=ff.Boolean(False),
     save_checkpoints=ff.Boolean(False),
 )
@@ -138,11 +142,10 @@ def main(_):
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
     run_config = config.RunConfig(
-        name=tune_config["name"],
         callbacks=callbacks,
         checkpoint_config=checkpoint_config,
         sync_config=sync_config,
-        verbose=tune_config["verbose"],
+        **tune_config["run"],
     )
 
     tuner = tune.Tuner(
