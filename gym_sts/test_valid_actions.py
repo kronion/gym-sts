@@ -30,9 +30,10 @@ def main():
     if args.build_image:
         SlayTheSpireGymEnv.build_image()
     env = SlayTheSpireGymEnv(
-        args.lib_dir, args.mods_dir, args.out_dir, headless=args.headless
+        args.lib_dir, args.mods_dir, args.out_dir,
+        headless=args.headless,
+        animate=args.render,
     )
-    env.communicator.render(args.render)
     env.reset(seed=42)
     rng = random.Random(42)
 
