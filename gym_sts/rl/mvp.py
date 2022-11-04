@@ -41,12 +41,15 @@ ENV = ff.DEFINE_dict(
 
 TUNE = ff.DEFINE_dict(
     "tune",
+    name=ff.String("sts-rl", "Name of the ray experiment"),
     checkpoint_config=dict(
         checkpoint_frequency=ff.Integer(20),
         checkpoint_at_end=ff.Boolean(False),
         num_to_keep=ff.Integer(3),
     ),
-    restore=ff.String(None, "path to checkpoint to restore from"),
+    restore=ff.String(
+        None, "Path to experiment directory to restore from, e.g. ~/ray_results/sts-rl"
+    ),
     sync_config=dict(
         upload_dir=ff.String(None, "Path to local or remote folder."),
         syncer=ff.String("auto"),
@@ -131,6 +134,7 @@ def main(_):
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
     run_config = config.RunConfig(
+        name=tune_config["name"],
         callbacks=callbacks,
         checkpoint_config=checkpoint_config,
         sync_config=sync_config,
