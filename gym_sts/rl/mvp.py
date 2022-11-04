@@ -6,12 +6,11 @@ import ray
 from absl import app, logging
 from gym import spaces
 from ray import tune
+from ray.air import config
 from ray.air.callbacks.wandb import WandbLoggerCallback
-
-# from ray.tune.integration.wandb import WandbLoggerCallback
-# # from ray.rllib import utils
 from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
+from ray.train.rl import RLTrainer
 
 from gym_sts.envs import base
 from gym_sts.rl import models_tf
@@ -42,11 +41,12 @@ ENV = ff.DEFINE_dict(
 
 TUNE = ff.DEFINE_dict(
     "tune",
-    checkpoint_freq=ff.Integer(20),
-    keep_checkpoints_num=ff.Integer(3),
-    checkpoint_at_end=ff.Boolean(False),
+    checkpoint_config=dict(
+        checkpoint_frequency=ff.Integer(20),
+        checkpoint_at_end=ff.Boolean(False),
+        num_to_keep=ff.Integer(3),
+    ),
     restore=ff.String(None, "path to checkpoint to restore from"),
-    resume=ff.Enum(None, ["LOCAL", "REMOTE", "PROMPT", "ERRORED_ONLY", "AUTO"]),
     sync_config=dict(
         upload_dir=ff.String(None, "Path to local or remote folder."),
         syncer=ff.String("auto"),
@@ -98,10 +98,12 @@ def main(_):
         logging.info("build_image")
         base.SlayTheSpireGymEnv.build_image()
 
+    rl_config = RL.value.copy()
+    num_workers = rl_config.pop("num_workers")
+
     ppo_config = {
         "env": Env,
         "env_config": env_config,
-        # "framework": "torch",
         "framework": "tf2",
         "eager_tracing": True,
         # "horizon": 64,  # just for reporting some rewards
@@ -111,25 +113,40 @@ def main(_):
             "custom_model": "masked",
         },
     }
-    ppo_config.update(RL.value)
+    ppo_config.update(rl_config)
 
-    tune_config = TUNE.value
-    tune_config["sync_config"] = tune.SyncConfig(**tune_config["sync_config"])
+    trainer = RLTrainer(
+        scaling_config=config.ScalingConfig(num_workers=num_workers, use_gpu=True),
+        algorithm=ppo.PPO,
+        config=ppo_config,
+    )
 
     callbacks = []
-
     wandb_config = WANDB.value.copy()
     if wandb_config.pop("use"):
         wandb_callback = WandbLoggerCallback(**wandb_config)
         callbacks.append(wandb_callback)
 
-    tune.run(
-        ppo.PPO,
-        config=ppo_config,
-        # stop={"episode_reward_mean": 1},
+    tune_config = TUNE.value
+    sync_config = tune.SyncConfig(**tune_config["sync_config"])
+    checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
+    run_config = config.RunConfig(
         callbacks=callbacks,
-        **tune_config,
+        checkpoint_config=checkpoint_config,
+        sync_config=sync_config,
+        verbose=tune_config["verbose"],
     )
+
+    tuner = tune.Tuner(
+        trainable=trainer,
+        run_config=run_config,
+    )
+
+    restore_path = tune_config.get("restore")
+    if restore_path:
+        tuner = tune.Tuner.restore(restore_path)
+
+    tuner.fit()
 
 
 if __name__ == "__main__":
