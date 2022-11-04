@@ -12,5 +12,3 @@ EXTRA_ARGS = [
 ]
 
 DOCKER_IMAGE_TAG = "sts"
-
-EVENTS_JSON_PATH = "data/events.json"
