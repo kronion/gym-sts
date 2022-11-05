@@ -1,7 +1,8 @@
 import json
+from pathlib import Path
 from typing import Dict, List, Tuple
 
-from gym_sts.constants import EVENTS_JSON_PATH
+from gym_sts.constants import PROJECT_ROOT
 from gym_sts.spaces.constants import (
     ALL_EVENTS,
     GLOBALLY_CHECKED_TEXTS,
@@ -13,7 +14,7 @@ REMOVED_STRINGS = ["#r", "#y", "#g", "#b", "#p", "@", "~", "NL"]
 
 # Utility to match event text with normal text
 class EventData:
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: Path):
         with open(file_path, "r") as f:
             self._data = json.load(f)
         self.event_texts: Dict[str, List[str]] = {
@@ -79,4 +80,5 @@ class EventData:
                     )
 
 
+EVENTS_JSON_PATH = PROJECT_ROOT / "data" / "events.json"
 EVENT_DATA = EventData(EVENTS_JSON_PATH)
