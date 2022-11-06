@@ -71,11 +71,15 @@ WANDB = ff.DEFINE_dict(
 
 RL = ff.DEFINE_dict(
     "rl",
-    num_workers=ff.Integer(0),
     rollout_fragment_length=ff.Integer(32),
     train_batch_size=ff.Integer(1024),
 )
 
+SCALING = ff.DEFINE_dict(
+    "scaling",
+    num_workers=ff.Integer(0),
+    use_gpu=ff.Boolean(False),
+)
 
 class Env(base.SlayTheSpireGymEnv):
     def __init__(self, cfg: dict):
@@ -102,7 +106,6 @@ def main(_):
         base.SlayTheSpireGymEnv.build_image()
 
     rl_config = RL.value.copy()
-    num_workers = rl_config.pop("num_workers")
 
     ppo_config = {
         "env": Env,
@@ -119,7 +122,7 @@ def main(_):
     ppo_config.update(rl_config)
 
     trainer = RLTrainer(
-        scaling_config=config.ScalingConfig(num_workers=num_workers, use_gpu=True),
+        scaling_config=config.ScalingConfig(**SCALING.value),
         algorithm=ppo.PPO,
         config=ppo_config,
     )
