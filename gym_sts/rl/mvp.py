@@ -38,7 +38,7 @@ ENV = ff.DEFINE_dict(
     animate=ff.Boolean(False),
     ascension=ff.Integer(20),
     build_image=ff.Boolean(False),
-    reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
+    reboot_frequency=ff.Integer(20, "Reboot game every n resets."),
     reboot_on_error=ff.Boolean(False),
 )
 
@@ -117,9 +117,6 @@ def main(_):
         "mods_dir": os.path.abspath(ENV.value["mods"]),
         "output_dir": output_dir,
     }
-    for key in ["headless", "animate", "reboot_frequency", "reboot_on_error"]:
-        env_config[key] = ENV.value[key]
-
     if SINGLE_COMBAT.value["use"]:
         env_config["ascension"] = ENV.value["ascension"]
         env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
@@ -135,8 +132,6 @@ def main(_):
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
-        "fcnet_hiddens": [4096, 2048, 1024, 512],
-        "fcnet_activation": "relu",
         # "horizon": 64,  # just for reporting some rewards
         # "soft_horizon": True,
         # "no_done_at_end": True,
