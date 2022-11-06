@@ -1,4 +1,4 @@
-from gym.spaces import Dict, MultiBinary, MultiDiscrete
+from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import parse_obj_as
 
 from gym_sts.spaces import constants
@@ -20,6 +20,7 @@ class PersistentStateObs(ObsComponent):
         self.deck = []
         self.keys = {}
         self.map = MapObs()
+        self.screen_type = "EMPTY"
 
         if "game_state" in state:
             game_state = state["game_state"]
@@ -31,6 +32,7 @@ class PersistentStateObs(ObsComponent):
             self.relics = parse_obj_as(list[types.Relic], game_state["relics"])
             self.deck = parse_obj_as(list[types.Card], game_state["deck"])
             self.map = MapObs(state)
+            self.screen_type = game_state["screen_type"]
 
             if "keys" in game_state:
                 self.keys = game_state["keys"]
@@ -49,6 +51,7 @@ class PersistentStateObs(ObsComponent):
                 "deck": spaces.generate_card_space(),
                 "keys": MultiBinary(constants.NUM_KEYS),
                 "map": MapObs.space(),
+                "screen_type": Discrete(len(constants.ALL_SCREEN_TYPES)),
             }
         )
 
@@ -74,6 +77,8 @@ class PersistentStateObs(ObsComponent):
                 _keys[i] = self.keys[key]
         keys = [int(key) for key in _keys]
 
+        screen_type = constants.ALL_SCREEN_TYPES.index(self.screen_type)
+
         response = {
             "health": health,
             "gold": gold,
@@ -82,6 +87,7 @@ class PersistentStateObs(ObsComponent):
             "deck": deck,
             "keys": keys,
             "map": self.map.serialize(),
+            "screen_type": screen_type,
         }
 
         return response

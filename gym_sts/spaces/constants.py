@@ -1128,3 +1128,20 @@ COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
 
 # (Card + gold + potion + 2 relics (black star) + key) * buffer in case I'm wrong
 MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)
+
+ALL_SCREEN_TYPES = [
+    "EMPTY",  # Indicates the absence of a screen type
+    "BOSS_REWARD",  # The contents of the boss chest
+    "CARD_REWARD",
+    "CHEST",
+    "COMBAT_REWARD",
+    "EVENT",
+    "GAME_OVER",
+    "GRID",  # The contents of card piles, e.g. the discard
+    "HAND_SELECT",
+    "MAP",
+    "NONE",  # Has several meanings, e.g. combat
+    "REST",
+    "SHOP_ROOM",  # The room containing the merchant
+    "SHOP_SCREEN",  # The actual shopping menu
+]
