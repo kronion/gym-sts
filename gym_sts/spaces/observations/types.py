@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from gym_sts.spaces import constants
+from gym_sts.spaces.constants import ScreenType
 
 from .utils import to_binary_array
 
@@ -163,3 +164,14 @@ class KeyReward(Reward):
             "type": constants.ALL_REWARD_TYPES.index("KEY"),
             "value": to_binary_array(key_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
         }
+
+
+class GameState(BaseModel):
+    floor: int = 0
+    hp: int = Field(0, alias="current_hp")
+    max_hp: int = 0
+    gold: int = 0
+    potions: list[Potion] = []
+    relics: list[Relic] = []
+    deck: list[Card] = []
+    screen_type: ScreenType = ScreenType.EMPTY

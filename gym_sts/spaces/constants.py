@@ -1,4 +1,5 @@
 import math
+from enum import IntEnum
 
 LOG_MAX_HP = 10
 LOG_MAX_GOLD = 12
@@ -1129,19 +1130,20 @@ COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
 # (Card + gold + potion + 2 relics (black star) + key) * buffer in case I'm wrong
 MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)
 
-ALL_SCREEN_TYPES = [
-    "EMPTY",  # Indicates the absence of a screen type
-    "BOSS_REWARD",  # The contents of the boss chest
-    "CARD_REWARD",
-    "CHEST",
-    "COMBAT_REWARD",
-    "EVENT",
-    "GAME_OVER",
-    "GRID",  # The contents of card piles, e.g. the discard
-    "HAND_SELECT",
-    "MAP",
-    "NONE",  # Has several meanings, e.g. combat
-    "REST",
-    "SHOP_ROOM",  # The room containing the merchant
-    "SHOP_SCREEN",  # The actual shopping menu
-]
+
+class ScreenType(IntEnum):
+    EMPTY = 0  # Indicates the absence of a screen type
+    BOSS_REWARD = 1  # The contents of the boss chest
+    CARD_REWARD = 2
+    CHEST = 3
+    COMBAT_REWARD = 4
+    EVENT = 5
+    GAME_OVER = 6
+    GRID = 7  # The contents of card piles, e.g. the discard
+    HAND_SELECT = 8
+    MAIN_MENU = 9
+    MAP = 10
+    NONE = 11  # Has several meanings, e.g. combat
+    REST = 12
+    SHOP_ROOM = 13  # The room containing the merchant
+    SHOP_SCREEN = 14  # The actual shopping menu
