@@ -38,7 +38,8 @@ class SlayTheSpireGymEnv(gym.Env):
         output_dir: Optional[str] = None,
         headless: bool = False,
         animate: bool = True,
-        reboot_frequency: int = 0,
+        reboot_frequency: Optional[int] = None,
+        reboot_on_error: bool = False,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -53,6 +54,8 @@ class SlayTheSpireGymEnv(gym.Env):
             animate: If True, the game UI will update as normal, which costs CPU time.
                 If False, the game will stop rendering frames, causing the UI to appear
                 frozen in place, but saving CPU.
+            reboot_frequency: Reboot the game every n resets. This stops memory leaks.
+            reboot_on_error: Reboot the game if an error (e.g. timeout) occurs.
         """
 
         self.lib_dir = pathlib.Path(lib_dir).resolve()
@@ -80,6 +83,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self.headless = headless
         self.reboot_frequency = reboot_frequency
         self.reset_count = 0
+        self.reboot_on_error = reboot_on_error
 
         # Animation can be toggled at any time using set_animate()
         self.animate = animate
@@ -269,7 +273,7 @@ class SlayTheSpireGymEnv(gym.Env):
         """
         Close and reopen the game process. Also works for the initial boot.
         """
-
+        print("env.reboot()")
         self.stop()
         self.start()
 
@@ -300,6 +304,8 @@ class SlayTheSpireGymEnv(gym.Env):
 
         options = options or {}
         params = ResetParams(seed=seed, return_info=return_info, **options)
+
+        print("env.reset, " + repr(params))
 
         if params.reboot:
             self.reset_count = 0
@@ -391,11 +397,23 @@ class SlayTheSpireGymEnv(gym.Env):
         try:
             obs = self.communicator._manual_command(action.to_command())
         except exceptions.StSError as e:
+            logging.error(e)
             print(prev_obs)
             print(action_id)
             now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             self.screenshot(f"error_{now}.png")
-            raise e
+            if not self.reboot_on_error:
+                raise e
+
+            # Reboot and return done=True to trigger a reset
+            self.reboot()
+            obs = prev_obs
+            info = {
+                "observation": obs,
+                "had_error": obs.has_error,
+                "reboot_error": e,
+            }
+            return obs.serialize(), 0.0, True, info
 
         if obs.has_error == is_valid:
             # indicates a mismatch in our action validity checking
