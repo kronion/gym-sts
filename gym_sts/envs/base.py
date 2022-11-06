@@ -155,7 +155,6 @@ class SlayTheSpireGymEnv(gym.Env):
         self.container = self.client.containers.run(
             image=constants.DOCKER_IMAGE_TAG,
             remove=True,
-            devices=["/dev/snd"],
             init=True,
             detach=True,
             volumes={
