@@ -1136,6 +1136,7 @@ ALL_SCREEN_TYPES = [
     "CHEST",
     "COMBAT_REWARD",
     "EVENT",
+    "FTUE",
     "GAME_OVER",
     "GRID",  # The contents of card piles, e.g. the discard
     "HAND_SELECT",
