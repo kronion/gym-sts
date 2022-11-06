@@ -135,7 +135,9 @@ def main(_):
     callbacks = []
     wandb_config = WANDB.value.copy()
     if wandb_config.pop("use"):
-        wandb_callback = WandbLoggerCallback(**wandb_config)
+        wandb_callback = WandbLoggerCallback(
+            name=TUNE.value["run"]["name"],
+            **wandb_config)
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value
