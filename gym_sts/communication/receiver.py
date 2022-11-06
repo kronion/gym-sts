@@ -3,9 +3,10 @@ import json
 import os
 import time
 
+from gym_sts import exceptions
 
 class Receiver:
-    def __init__(self, fn, timeout: float = 50):
+    def __init__(self, fn, timeout: float = 50, verbose: bool = True):
         self.fh = open(fn, "r")
 
         # Reading the pipe does not block if there are no contents
@@ -15,6 +16,7 @@ class Receiver:
         self.timeout = timeout
         self.sleep_time = 0.05
         self.num_steps = int(timeout / self.sleep_time)
+        self.verbose = verbose
 
     def empty_fifo(self) -> None:
         """
@@ -42,7 +44,7 @@ class Receiver:
 
             time.sleep(self.sleep_time)
 
-        raise TimeoutError(
+        raise exceptions.StSTimeoutError(
             f"Waited {self.timeout} seconds for game state to be ready "
             "for command, but it didn't happen."
         )
