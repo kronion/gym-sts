@@ -25,7 +25,7 @@ class StateLogger:
             }
         )
 
-        if len(self.unlogged_actions) > self.batch_size:
+        if len(self.unlogged_actions) >= self.batch_size:
             self.flush_actions()
 
     def flush_actions(self):
