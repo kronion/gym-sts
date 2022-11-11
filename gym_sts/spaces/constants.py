@@ -1,5 +1,8 @@
 import math
-from enum import IntEnum
+from enum import Enum
+
+NUM_FLOORS = 55
+LOG_NUM_FLOORS = math.ceil(math.log(NUM_FLOORS, 2))
 
 LOG_MAX_HP = 10
 LOG_MAX_GOLD = 12
@@ -1131,19 +1134,20 @@ COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
 MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)
 
 
-class ScreenType(IntEnum):
-    EMPTY = 0  # Indicates the absence of a screen type
-    BOSS_REWARD = 1  # The contents of the boss chest
-    CARD_REWARD = 2
-    CHEST = 3
-    COMBAT_REWARD = 4
-    EVENT = 5
-    GAME_OVER = 6
-    GRID = 7  # The contents of card piles, e.g. the discard
-    HAND_SELECT = 8
-    MAIN_MENU = 9
-    MAP = 10
-    NONE = 11  # Has several meanings, e.g. combat
-    REST = 12
-    SHOP_ROOM = 13  # The room containing the merchant
-    SHOP_SCREEN = 14  # The actual shopping menu
+class ScreenType(str, Enum):
+    EMPTY = "EMPTY"  # Indicates the absence of a screen type
+    BOSS_REWARD = "BOSS_REWARD"  # The contents of the boss chest
+    CARD_REWARD = "CARD_REWARD"
+    CHEST = "CHEST"
+    COMBAT_REWARD = "COMBAT_REWARD"
+    EVENT = "EVENT"
+    FTUE = "FTUE"
+    GAME_OVER = "GAME_OVER"
+    GRID = "GRID"  # The contents of card piles, e.g. the discard
+    HAND_SELECT = "HAND_SELECT"
+    MAIN_MENU = "MAIN_MENU"
+    MAP = "MAP"
+    NONE = "NONE"  # Has several meanings, e.g. combat
+    REST = "REST"
+    SHOP_ROOM = "SHOP_ROOM"  # The room containing the merchant
+    SHOP_SCREEN = "SHOP_SCREEN"  # The actual shopping menu

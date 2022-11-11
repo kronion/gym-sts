@@ -3,6 +3,7 @@ import functools
 from gym import spaces
 
 from gym_sts.spaces import actions
+
 from . import components
 
 
@@ -28,7 +29,11 @@ OBSERVATION_SPACE = spaces.Dict(
 
 class Observation:
     def __init__(self, state: dict):
-        self.persistent_state = components.PersistentStateObs(state)
+        game_state = state.get("game_state", {})
+        try:
+            self.persistent_state = components.PersistentStateObs(**game_state)
+        except Exception as e:
+            breakpoint()
         self.combat_state = components.CombatObs(state)
         self.shop_state = components.ShopObs(state)
         self.campfire_state = components.CampfireObs(state)
@@ -102,6 +107,7 @@ class Observation:
     def valid_actions(self) -> list[actions.Action]:
         # avoid circular import
         from gym_sts.envs.action_validation import get_valid
+
         return get_valid(self)
 
     def serialize(self) -> dict:

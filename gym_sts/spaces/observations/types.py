@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -50,17 +51,17 @@ class HandCard(Card):
 
 
 class Potion(BaseModel):
-    requires_target: bool
-    can_use: bool
-    can_discard: bool
-    name: str
     id: str
+    requires_target: Optional[bool]
+    can_use: Optional[bool]
+    can_discard: Optional[bool]
+    name: Optional[str]
 
 
 class Relic(BaseModel):
-    name: str
     id: str
-    counter: int
+    name: Optional[str]
+    counter: Optional[int]
 
 
 class ShopMixin(BaseModel):
@@ -166,12 +167,24 @@ class KeyReward(Reward):
         }
 
 
-class GameState(BaseModel):
-    floor: int = 0
-    hp: int = Field(0, alias="current_hp")
-    max_hp: int = 0
-    gold: int = 0
-    potions: list[Potion] = []
-    relics: list[Relic] = []
-    deck: list[Card] = []
-    screen_type: ScreenType = ScreenType.EMPTY
+class Keys(BaseModel):
+    emerald: bool = False
+    ruby: bool = False
+    sapphire: bool = False
+
+
+class MapCoordinates(BaseModel):
+    x: int
+    y: int
+
+
+class StandardNode(MapCoordinates):
+    symbol: str
+    children: list[MapCoordinates]
+
+
+class EliteNode(StandardNode):
+    is_burning: bool
+
+
+Node = Union[StandardNode, EliteNode]
