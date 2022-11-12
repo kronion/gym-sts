@@ -1,7 +1,8 @@
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import parse_obj_as
 
-from gym_sts.spaces import constants
+import gym_sts.spaces.constants.cards as card_consts
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import types
 
 from .base import ObsComponent
@@ -33,10 +34,10 @@ class CardRewardObs(ObsComponent):
                 # At most 4 cards may be offered (due to Question Card relic).
                 "cards": Tuple(
                     (
-                        MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
-                        MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
-                        MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
-                        MultiBinary(constants.LOG_NUM_CARDS_WITH_UPGRADES),
+                        MultiBinary(card_consts.LOG_NUM_CARDS_WITH_UPGRADES),
+                        MultiBinary(card_consts.LOG_NUM_CARDS_WITH_UPGRADES),
+                        MultiBinary(card_consts.LOG_NUM_CARDS_WITH_UPGRADES),
+                        MultiBinary(card_consts.LOG_NUM_CARDS_WITH_UPGRADES),
                     )
                 ),
                 "singing_bowl": Discrete(2),

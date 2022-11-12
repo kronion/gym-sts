@@ -1,6 +1,6 @@
 from gym.spaces import Dict, Discrete, MultiBinary
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.data import EVENT_DATA
 
 from .base import ObsComponent

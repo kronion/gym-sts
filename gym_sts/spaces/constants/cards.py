@@ -3783,7 +3783,7 @@ class _CardCatalog:
                 default_cost=0,
                 ethereal=False,
                 exhausts=False,
-                _target=False,
+                has_target=False,
             ),
         ),
         "Finesse": CardMetadata(
@@ -6005,8 +6005,12 @@ class _CardCatalog:
 
         return data
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._id_to_meta)
+
+    @property
+    def ids(self) -> list:
+        return list(self._id_to_meta.keys())
 
 
 CardCatalog = _CardCatalog()
@@ -6016,3 +6020,7 @@ NUM_CARDS = len(CardCatalog)
 NUM_CARDS_WITH_UPGRADES = NUM_CARDS * 2
 LOG_NUM_CARDS = math.ceil(math.log(NUM_CARDS, 2))
 LOG_NUM_CARDS_WITH_UPGRADES = LOG_NUM_CARDS + 1  # Use one more bit to indicate upgrade
+
+# There's no real limit in the game, but this value greatly impacts the size
+# of the observation space.
+MAX_COPIES_OF_CARD = 5

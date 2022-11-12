@@ -1,6 +1,5 @@
-from pydantic import BaseModel
-
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants import cards as card_consts
 from gym_sts.spaces.observations import types
 
 from .utils import to_binary_array
@@ -8,11 +7,11 @@ from .utils import to_binary_array
 
 def serialize_cards(cards: list[types.Card]) -> list[int]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
-    serialized = [0] * constants.NUM_CARDS_WITH_UPGRADES
+    serialized = [0] * card_consts.NUM_CARDS_WITH_UPGRADES
     for card in cards:
         card_idx = card.serialize_discrete()
 
-        if serialized[card_idx] < constants.MAX_COPIES_OF_CARD:
+        if serialized[card_idx] < card_consts.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1
 
     return serialized

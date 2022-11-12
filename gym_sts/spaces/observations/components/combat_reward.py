@@ -1,6 +1,6 @@
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import types
 
 from .base import ObsComponent

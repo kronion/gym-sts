@@ -1,7 +1,8 @@
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import parse_obj_as
 
-from gym_sts.spaces import constants
+import gym_sts.spaces.constants.cards as card_consts
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import types, utils
 
 from .base import ObsComponent
@@ -42,7 +43,7 @@ class ShopObs(ObsComponent):
                         Dict(
                             {
                                 "card": MultiBinary(
-                                    constants.LOG_NUM_CARDS_WITH_UPGRADES
+                                    card_consts.LOG_NUM_CARDS_WITH_UPGRADES
                                 ),
                                 "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
                             }

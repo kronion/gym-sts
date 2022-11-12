@@ -3,7 +3,8 @@ from __future__ import annotations
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import BaseModel, Field
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants.cards import CardCatalog, CardMetadata
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import PydanticComponent
@@ -112,7 +113,7 @@ class PersistentStateObs(PydanticComponent):
     keys: types.Keys = types.Keys()
     act_map: list[types.Node] = Field([], alias="map")
     act_boss: str = "NONE"  # TODO use enum
-    screen_type: types.ScreenType = types.ScreenType.EMPTY
+    screen_type: constants.ScreenType = constants.ScreenType.EMPTY
 
     # def __init__(self, state: dict):
     #     # Sane defaults
@@ -226,7 +227,27 @@ class PersistentStateObs(PydanticComponent):
             if relic_id != "NONE":
                 relics.append(types.Relic(id=relic_id))
 
-        # deck = None
+        deck = []
+        for _card_idx, count in enumerate(data.deck):
+            card_idx, upgrade_bit = divmod(_card_idx, 2)
+            card_id = CardCatalog.ids[card_idx]
+            if card_id != "NONE" and count > 0:
+                card_meta: CardMetadata = getattr(CardCatalog, card_id)
+                card_props = card_meta.upgraded if upgrade_bit else card_meta.unupgraded
+
+                for _ in range(count):
+                    card = types.Card(
+                        id=card_id,
+                        # TODO may be wrong because we don't currently serialize cost
+                        cost=card_props.default_cost,
+                        exhausts=card_props.exhausts,
+                        ethereal=card_props.ethereal,
+                        has_target=card_props.has_target,
+                        # TODO may be wrong for cards that can be upgraded 2+ times
+                        upgrades=upgrade_bit,
+                    )
+                    deck.append(card)
+
         ruby, emerald, sapphire = data.keys
         keys = types.Keys(ruby=ruby, emerald=emerald, sapphire=sapphire)
         act_map, act_boss = deserialize_map(data.act_map)
@@ -238,6 +259,8 @@ class PersistentStateObs(PydanticComponent):
             max_hp=max_hp,
             gold=gold,
             potions=potions,
+            relics=relics,
+            deck=deck,
             keys=keys,
             map=act_map,
             act_boss=act_boss,

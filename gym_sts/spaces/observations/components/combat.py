@@ -2,7 +2,8 @@ from typing import Optional
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
-from gym_sts.spaces import constants
+import gym_sts.spaces.constants.cards as card_consts
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
@@ -84,7 +85,7 @@ class CombatObs(ObsComponent):
             {
                 "turn": MultiBinary(constants.LOG_MAX_TURN),
                 "hand": MultiDiscrete(
-                    [constants.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
+                    [card_consts.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
                 ),
                 "energy": MultiBinary(constants.LOG_MAX_ENERGY),
                 "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),

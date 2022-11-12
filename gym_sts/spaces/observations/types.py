@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from gym_sts.spaces import constants
-from gym_sts.spaces.constants import ScreenType
+import gym_sts.spaces.constants.cards as card_consts
+from gym_sts.spaces import old_constants as constants
 
 from .utils import to_binary_array
 
@@ -12,7 +12,7 @@ from .utils import to_binary_array
 class Card(BaseModel):
     exhausts: bool
     cost: int
-    name: str
+    name: Optional[str]
     id: str
     ethereal: bool
     upgrades: int
@@ -20,7 +20,7 @@ class Card(BaseModel):
 
     @staticmethod
     def _serialize_binary(card_idx: int, upgrades: int) -> list[int]:
-        array = to_binary_array(card_idx, constants.LOG_NUM_CARDS)
+        array = to_binary_array(card_idx, card_consts.LOG_NUM_CARDS)
 
         upgrade_bit = [0]
         if upgrades > 0:
@@ -35,14 +35,14 @@ class Card(BaseModel):
         return cls._serialize_binary(0, 0)
 
     def serialize_discrete(self) -> int:
-        card_idx = constants.ALL_CARDS.index(self.id) * 2
+        card_idx = card_consts.CardCatalog.ids.index(self.id) * 2
         if self.upgrades > 0:
             card_idx += 1
 
         return card_idx
 
     def serialize_binary(self) -> list[int]:
-        card_idx = constants.ALL_CARDS.index(self.id)
+        card_idx = card_consts.CardCatalog.ids.index(self.id)
         return self._serialize_binary(card_idx, self.upgrades)
 
 

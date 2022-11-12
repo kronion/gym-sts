@@ -3,7 +3,7 @@ from typing import Optional
 from gym.spaces import Discrete
 from pydantic import BaseModel, PrivateAttr
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
 
 
 class Action(BaseModel):

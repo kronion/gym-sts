@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 from gym_sts.constants import PROJECT_ROOT
-from gym_sts.spaces.constants import (
+from gym_sts.spaces.old_constants import (
     ALL_EVENTS,
     GLOBALLY_CHECKED_TEXTS,
     MAX_NUM_CUSTOM_TEXTS,
