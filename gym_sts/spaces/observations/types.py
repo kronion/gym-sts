@@ -12,7 +12,7 @@ from .utils import to_binary_array
 class Card(BaseModel):
     exhausts: bool
     cost: int
-    name: Optional[str]
+    name: str
     id: str
     ethereal: bool
     upgrades: int

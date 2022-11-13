@@ -231,13 +231,14 @@ class PersistentStateObs(PydanticComponent):
         for _card_idx, count in enumerate(data.deck):
             card_idx, upgrade_bit = divmod(_card_idx, 2)
             card_id = CardCatalog.ids[card_idx]
-            if card_id != "NONE" and count > 0:
+            if card_id != CardCatalog.NONE.id and count > 0:
                 card_meta: CardMetadata = getattr(CardCatalog, card_id)
                 card_props = card_meta.upgraded if upgrade_bit else card_meta.unupgraded
 
                 for _ in range(count):
                     card = types.Card(
                         id=card_id,
+                        name=card_meta.name,
                         # TODO may be wrong because we don't currently serialize cost
                         cost=card_props.default_cost,
                         exhausts=card_props.exhausts,
