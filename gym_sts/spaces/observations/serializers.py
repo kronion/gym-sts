@@ -1,3 +1,5 @@
+import numpy as np
+
 from gym_sts.spaces import constants
 from gym_sts.spaces.observations import types
 
@@ -13,7 +15,7 @@ def serialize_cards(cards: list[types.Card]) -> list[int]:
         if serialized[card_idx] < constants.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1
 
-    return serialized
+    return np.array(serialized, dtype=np.uint8)
 
 
 def serialize_health(hp: int, max_hp: int) -> dict[str, list[int]]:
@@ -47,7 +49,7 @@ def serialize_effects(effects: list) -> list[dict]:
 
 
 def serialize_orbs(orbs: list) -> list:
-    serialized = [0] * constants.MAX_ORB_SLOTS
+    serialized = np.zeros([constants.MAX_ORB_SLOTS], dtype=np.uint8)
     for i, orb in enumerate(orbs):
         if "id" in orb:
             orb_idx = constants.ALL_ORBS.index(orb["id"])
