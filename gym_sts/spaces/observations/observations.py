@@ -1,5 +1,6 @@
 import functools
 
+import numpy as np
 from gym import spaces
 
 from gym_sts.spaces import actions
@@ -105,7 +106,7 @@ class Observation:
         return get_valid(self)
 
     def serialize(self) -> dict:
-        valid_action_mask = [False] * len(actions.ACTIONS)
+        valid_action_mask = np.zeros([len(actions.ACTIONS)], dtype=bool)
         for action in self.valid_actions:
             valid_action_mask[action._id] = True
 

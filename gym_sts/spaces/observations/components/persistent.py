@@ -1,3 +1,4 @@
+import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import parse_obj_as
 
@@ -60,22 +61,21 @@ class PersistentStateObs(ObsComponent):
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
         potions = [0] * constants.NUM_POTION_SLOTS
+        potions = np.zeros([constants.NUM_POTION_SLOTS], dtype=np.uint8)
 
         for i, potion in enumerate(self.potions):
             potions[i] = constants.ALL_POTIONS.index(potion.id)
 
-        _relics = [False] * constants.NUM_RELICS
+        relics = np.zeros([constants.NUM_RELICS], dtype=bool)
         for relic in self.relics:
-            _relics[constants.ALL_RELICS.index(relic.id)] = True
-        relics = [int(relic) for relic in _relics]
+            relics[constants.ALL_RELICS.index(relic.id)] = True
 
         deck = serializers.serialize_cards(self.deck)
 
-        _keys = [False] * constants.NUM_KEYS
+        keys = np.zeros([constants.NUM_KEYS], dtype=bool)
         for i, key in enumerate(["ruby", "emerald", "sapphire"]):
             if key in self.keys:
-                _keys[i] = self.keys[key]
-        keys = [int(key) for key in _keys]
+                keys[i] = self.keys[key]
 
         screen_type = constants.ALL_SCREEN_TYPES.index(self.screen_type)
 
