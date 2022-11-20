@@ -1,4 +1,6 @@
-def to_binary_array(n: int, digits: int) -> list[int]:
+import numpy as np
+
+def to_binary_array(n: int, digits: int) -> np.ndarray:
     array = [0] * digits
 
     idx = 0
@@ -14,7 +16,7 @@ def to_binary_array(n: int, digits: int) -> list[int]:
             array[idx] = 1
         idx += 1
 
-    return array
+    return np.array(array, dtype=np.uint8)
 
 
 def from_binary_array(array: list[int]) -> int:

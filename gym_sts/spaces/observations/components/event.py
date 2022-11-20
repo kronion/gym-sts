@@ -1,3 +1,4 @@
+import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary
 
 from gym_sts.spaces import constants
@@ -46,9 +47,9 @@ class EventStateObs(ObsComponent):
         )
 
     def serialize(self) -> dict:
-        text = [int(flag) for _, flag in self.text_matches]
-        text.extend([0] * (constants.MAX_NUM_TEXTS - len(text)))
+        text = [flag for _, flag in self.text_matches]
+        text.extend([False] * (constants.MAX_NUM_TEXTS - len(text)))
         return {
             "event_id": constants.ALL_EVENTS.index(self.event_id),
-            "text": text,
+            "text": np.array(text),
         }

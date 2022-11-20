@@ -1,5 +1,6 @@
 from typing import Optional
 
+import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
 from gym_sts.spaces import constants
@@ -164,7 +165,7 @@ class CombatObs(ObsComponent):
 
         response = {
             "turn": turn,
-            "hand": hand,
+            "hand": np.array(hand, dtype=np.uint16),
             "energy": energy,
             "block": block,
             "effects": effects,
