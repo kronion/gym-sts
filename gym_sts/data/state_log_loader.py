@@ -1,27 +1,8 @@
 import json
 from typing import TextIO
 
-import numpy as np
-from tqdm import tqdm
-
 from gym_sts.spaces.actions import ACTIONS
 from gym_sts.spaces.observations import Observation
-
-
-# TODO: Remove this after everything in the main obs space outputs numpy arrays
-def preprocess(d: dict):
-    for k in d.keys():
-        v = d[k]
-        if type(v) == dict:
-            preprocess(v)
-        elif type(v) == list:
-            d[k] = np.array(v)
-        elif type(v) == int:
-            pass
-        else:
-            print(type(v))
-            assert False
-    return d
 
 
 class StateLogLoader:
@@ -36,9 +17,8 @@ class StateLogLoader:
 
         prev_obs = None
 
-        for obj in tqdm(objs):
+        for obj in objs:
             cur_obs = Observation(obj["state_after"]).serialize()
-            preprocess(cur_obs)
 
             self.state_data.append(cur_obs)
 
