@@ -44,7 +44,7 @@ class StateLogLoader:
 
             # Store step data
             if prev_obs and obj["action"]:
-                self.step_data["state_before"].append(cur_obs)
+                self.step_data["state_before"].append(prev_obs)
                 self.step_data["action"].append(action_strings.index(obj["action"]))
                 self.step_data["state_after"].append(cur_obs)
 
