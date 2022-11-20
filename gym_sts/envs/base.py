@@ -484,7 +484,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
     def save_artifact(self, file_name):
         # TODO: Implement uploading to WandB
-        raise Exception("Not implemented")
+        raise NotImplementedError("Not implemented")
 
     def close(self) -> None:
         """
