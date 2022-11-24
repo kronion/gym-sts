@@ -11,6 +11,9 @@ import pickle
 import random
 import time
 
+import numpy as np
+import tree
+
 from gym_sts.envs.action_validation import validate
 from gym_sts.envs.base import SlayTheSpireGymEnv
 from gym_sts.spaces.actions import ACTIONS
@@ -101,7 +104,8 @@ def main():
     if args.dump_states:
         states_file = os.path.join(args.out_dir, "states.pkl")
         with open(states_file, 'wb') as f:
-            pickle.dump(states, f)
+            column_major = tree.map_structure(lambda *xs: np.array(xs), *states)
+            pickle.dump(column_major, f)
 
 
 if __name__ == "__main__":
