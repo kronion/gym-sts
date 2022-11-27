@@ -1,6 +1,9 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Union
 
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+from pydantic import BaseModel
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
@@ -9,7 +12,7 @@ from gym_sts.spaces.observations import serializers, spaces, types, utils
 from .base import ObsComponent
 
 
-def _generate_enemy_space():
+def _generate_enemy_space() -> Dict:
     return Dict(
         {
             "id": Discrete(constants.NUM_MONSTER_TYPES),
@@ -32,55 +35,49 @@ class CombatObs(ObsComponent):
         # Sane defaults
         self.turn = 0
 
-        self.hand = []
-        self.discard = []
-        self.draw = []
-        self.exhaust = []
+        self.hand: list[types.HandCard] = []
+        self.discard: list[types.Card] = []
+        self.draw: list[types.Card] = []
+        self.exhaust: list[types.Card] = []
 
-        self.enemies = []
+        self.enemies: list[types.Enemy] = []
 
         self.energy = 0
         self.block = 0
-        self.effects = []
-        self.orbs = []
+        self.effects: list[types.Effect] = []
+        self.orbs: list[types.Orb] = []
 
         # TODO make selections part of observation space?
         self.hand_selects = []
         self.max_selects = 0
         self.can_pick_zero = False
 
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if "combat_state" in game_state:
-                combat_state = game_state["combat_state"]
+        if "combat_state" in state:
+            combat_state = state["combat_state"]
 
-                self.turn = combat_state["turn"]
+            self.turn = combat_state["turn"]
 
-                self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
-                self.discard = [
-                    types.Card(**card) for card in combat_state["discard_pile"]
-                ]
-                self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
-                self.exhaust = [
-                    types.Card(**card) for card in combat_state["exhaust_pile"]
-                ]
+            self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
+            self.discard = [types.Card(**card) for card in combat_state["discard_pile"]]
+            self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
+            self.exhaust = [types.Card(**card) for card in combat_state["exhaust_pile"]]
 
-                self.enemies = combat_state["monsters"]
+            self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
 
-                player_state = combat_state["player"]
-                self.block = player_state["block"]
-                self.energy = player_state["energy"]
-                self.effects = player_state["powers"]
-                self.orbs = player_state["orbs"]
+            player_state = combat_state["player"]
+            self.block = player_state["block"]
+            self.energy = player_state["energy"]
+            self.effects = [types.Effect(**effect) for effect in player_state["powers"]]
+            self.orbs = [types.Orb(**orb) for orb in player_state["orbs"]]
 
-                if game_state["screen_type"] == "HAND_SELECT":
-                    screen_state = game_state["screen_state"]
-                    self.hand_selects = screen_state["selected"]
-                    self.max_selects = screen_state["max_cards"]
-                    self.can_pick_zero = screen_state["can_pick_zero"]
+            if state["screen_type"] == constants.ScreenType.HAND_SELECT:
+                screen_state = state["screen_state"]
+                self.hand_selects = screen_state["selected"]
+                self.max_selects = screen_state["max_cards"]
+                self.can_pick_zero = screen_state["can_pick_zero"]
 
     @staticmethod
-    def space():
+    def space() -> Dict:
         return Dict(
             {
                 "turn": MultiBinary(constants.LOG_MAX_TURN),
@@ -98,46 +95,6 @@ class CombatObs(ObsComponent):
             }
         )
 
-    def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
-        if enemy is not None:
-            damage = 0
-            times = 0
-
-            # These may not be present if the player has runic dome
-            if "move_adjusted_damage" in enemy and "move_hits" in enemy:
-                damage = max(enemy["move_adjusted_damage"], 0)
-                times = enemy["move_hits"]
-
-            serialized = {
-                "id": constants.ALL_MONSTER_TYPES.index(enemy["id"]),
-                "intent": constants.ALL_INTENTS.index(enemy["intent"]),
-                "attack": {
-                    "damage": utils.to_binary_array(damage, constants.LOG_MAX_ATTACK),
-                    "times": utils.to_binary_array(
-                        times, constants.LOG_MAX_ATTACK_TIMES
-                    ),
-                },
-                "block": utils.to_binary_array(enemy["block"], constants.LOG_MAX_BLOCK),
-                "effects": serializers.serialize_effects(enemy["powers"]),
-                "health": serializers.serialize_health(
-                    enemy["current_hp"], enemy["max_hp"]
-                ),
-            }
-        else:
-            serialized = {
-                "id": 0,
-                "intent": 0,
-                "attack": {
-                    "damage": utils.to_binary_array(0, constants.LOG_MAX_ATTACK),
-                    "times": utils.to_binary_array(0, constants.LOG_MAX_ATTACK_TIMES),
-                },
-                "block": utils.to_binary_array(0, constants.LOG_MAX_BLOCK),
-                "effects": serializers.serialize_effects([]),
-                "health": serializers.serialize_health(0, 0),
-            }
-
-        return serialized
-
     def serialize(self) -> dict:
         turn = utils.to_binary_array(self.turn, constants.LOG_MAX_TURN)
         energy = utils.to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
@@ -148,16 +105,12 @@ class CombatObs(ObsComponent):
             card_idx = card.serialize_discrete()
             hand[i] = card_idx
 
-        effects = serializers.serialize_effects(self.effects)
+        effects = types.Effect.serialize_all(self.effects)
         orbs = serializers.serialize_orbs(self.orbs)
 
-        enemies = []
-        for i in range(constants.NUM_ENEMIES):
-            enemy = None
-            if i < len(self.enemies):
-                enemy = self.enemies[i]
-
-            enemies.append(self._serialize_enemy(enemy))
+        enemies = [types.Enemy.serialize_empty()] * constants.NUM_ENEMIES
+        for i, enemy in enumerate(self.enemies):
+            enemies[i] = enemy.serialize()
 
         discard = serializers.serialize_cards(self.discard)
         draw = serializers.serialize_cards(self.draw)
@@ -177,3 +130,45 @@ class CombatObs(ObsComponent):
         }
 
         return response
+
+    class SerializedState(BaseModel):
+        turn: types.BinaryArray
+        hand: list[int]
+        energy: types.BinaryArray
+        block: types.BinaryArray
+        effects: list[dict]
+        orbs: list[int]
+        enemies: list[dict]
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> CombatObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        # Instantiate with empty data and update attributes individually,
+        # rather than trying to recreate CommunicationMod's weird data shape.
+        instance = cls({})
+
+        instance.turn = utils.from_binary_array(data.turn)
+        instance.energy = utils.from_binary_array(data.energy)
+        instance.block = utils.from_binary_array(data.block)
+
+        instance.effects = []
+        for effect_idx, e in enumerate(data.effects):
+            effect = types.Effect.deserialize(e)
+            if effect.amount != 0:
+                effect.id = constants.ALL_EFFECTS[effect_idx]
+                instance.effects.append(effect)
+
+        instance.orbs = [types.Orb.deserialize(orb) for orb in data.orbs]
+
+        instance.enemies = []
+        for e in data.enemies:
+            enemy = types.Enemy.deserialize(e)
+            if enemy.id != "NONE":
+                instance.enemies.append(enemy)
+
+        # TODO cards
+        # hand = ...
+
+        return instance

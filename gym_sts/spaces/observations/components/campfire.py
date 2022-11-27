@@ -1,4 +1,9 @@
-from gym.spaces import Dict, Discrete
+from __future__ import annotations
+
+from typing import Union
+
+from gym.spaces import Dict, Discrete, Space
+from pydantic import BaseModel
 
 from .base import ObsComponent
 
@@ -12,25 +17,19 @@ class CampfireObs(ObsComponent):
         self.toke = False
         self.dig = False
         self.recall = False
-        self.num_options = 0
 
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if "screen_type" in game_state and game_state["screen_type"] == "REST":
-                screen_state = game_state["screen_state"]
-                if screen_state["has_rested"]:
-                    return
+        if state.get("has_rested"):
+            return
 
-                rest_options = screen_state["rest_options"]
-                possible_options = ["rest", "smith", "lift", "toke", "dig", "recall"]
+        rest_options = state.get("rest_options", [])
+        possible_options = ["rest", "smith", "lift", "toke", "dig", "recall"]
 
-                for option in possible_options:
-                    if option in rest_options:
-                        setattr(self, option, True)
-                        self.num_options += 1
+        for option in possible_options:
+            if option in rest_options:
+                setattr(self, option, True)
 
     @staticmethod
-    def space():
+    def space() -> Space:
         return Dict(
             {
                 "rest": Discrete(2),
@@ -51,3 +50,29 @@ class CampfireObs(ObsComponent):
             "dig": int(self.dig),
             "recall": int(self.recall),
         }
+
+    class SerializedState(BaseModel):
+        rest: int
+        smith: int
+        lift: int
+        toke: int
+        dig: int
+        recall: int
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> CampfireObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        # Instantiate with empty data and update attributes individually,
+        # rather than trying to recreate CommunicationMod's weird data shape.
+        instance = cls({})
+
+        instance.rest = bool(data.rest)
+        instance.smith = bool(data.smith)
+        instance.lift = bool(data.lift)
+        instance.toke = bool(data.toke)
+        instance.dig = bool(data.dig)
+        instance.recall = bool(data.recall)
+
+        return instance

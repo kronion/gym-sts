@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Union
+
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import BaseModel, Field
 
@@ -11,17 +13,10 @@ from .base import PydanticComponent
 
 # from .map import MapObs
 
-BinaryArray = list[int]
-
-
-class SerializedHealth(BaseModel):
-    hp: BinaryArray
-    max_hp: BinaryArray
-
 
 class SerializedMap(BaseModel):
     nodes: list[int]
-    edges: BinaryArray
+    edges: types.BinaryArray
     boss: int
 
 
@@ -90,18 +85,6 @@ def deserialize_map(data: SerializedMap):
     return nodes, boss
 
 
-class SerializedState(BaseModel):
-    floor: BinaryArray
-    health: SerializedHealth
-    gold: BinaryArray
-    potions: list[int]
-    relics: BinaryArray
-    deck: list[int]
-    keys: BinaryArray
-    act_map: SerializedMap = Field(..., alias="map")
-    screen_type: int
-
-
 class PersistentStateObs(PydanticComponent):
     floor: int = 0
     hp: int = Field(0, alias="current_hp")
@@ -114,34 +97,6 @@ class PersistentStateObs(PydanticComponent):
     act_map: list[types.Node] = Field([], alias="map")
     act_boss: str = "NONE"  # TODO use enum
     screen_type: constants.ScreenType = constants.ScreenType.EMPTY
-
-    # def __init__(self, state: dict):
-    #     # Sane defaults
-    #     self.floor = 0
-    #     self.hp = 0
-    #     self.max_hp = 0
-    #     self.gold = 0
-    #     self.potions = []
-    #     self.relics = []
-    #     self.deck = []
-    #     self.keys = {}
-    #     self.map = MapObs()
-    #     self.screen_type = constants.ScreenType.EMPTY
-    #
-    #     if "game_state" in state:
-    #         game_state = state["game_state"]
-    #         self.floor = game_state["floor"]
-    #         self.hp = game_state["current_hp"]
-    #         self.max_hp = game_state["max_hp"]
-    #         self.gold = game_state["gold"]
-    #         self.potions = parse_obj_as(list[types.Potion], game_state["potions"])
-    #         self.relics = parse_obj_as(list[types.Relic], game_state["relics"])
-    #         self.deck = parse_obj_as(list[types.Card], game_state["deck"])
-    #         self.map = MapObs(state)
-    #         self.screen_type = constants.ScreenType[game_state["screen_type"]]
-    #
-    #         if "keys" in game_state:
-    #             self.keys = game_state["keys"]
 
     @staticmethod
     def space():
@@ -172,7 +127,7 @@ class PersistentStateObs(PydanticComponent):
 
     def serialize(self) -> dict:
         floor = utils.to_binary_array(self.floor, constants.LOG_NUM_FLOORS)
-        health = serializers.serialize_health(self.hp, self.max_hp)
+        health = types.Health(hp=self.hp, max_hp=self.max_hp).serialize()
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
         potions = [0] * constants.NUM_POTION_SLOTS
@@ -206,9 +161,21 @@ class PersistentStateObs(PydanticComponent):
 
         return response
 
+    class SerializedState(BaseModel):
+        floor: types.BinaryArray
+        health: types.Health.SerializedState
+        gold: types.BinaryArray
+        potions: list[int]
+        relics: types.BinaryArray
+        deck: list[int]
+        keys: types.BinaryArray
+        act_map: SerializedMap = Field(..., alias="map")
+        screen_type: int
+
     @classmethod
-    def deserialize(cls, raw_data: dict) -> PersistentStateObs:
-        data = SerializedState(**raw_data)
+    def deserialize(cls, data: Union[dict, SerializedState]) -> PersistentStateObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
 
         floor = utils.from_binary_array(data.floor)
         hp = utils.from_binary_array(data.health.hp)
@@ -217,15 +184,15 @@ class PersistentStateObs(PydanticComponent):
 
         potions = []
         for p in data.potions:
-            potion_id = constants.ALL_POTIONS[p]
-            if potion_id != "NONE":
-                potions.append(types.Potion(id=potion_id))
+            potion = types.Potion.deserialize(p)
+            if potion.id != "NONE":
+                potions.append(potion)
 
         relics = []
         for r in data.relics:
-            relic_id = constants.ALL_RELICS[r]
-            if relic_id != "NONE":
-                relics.append(types.Relic(id=relic_id))
+            relic = types.Relic.deserialize(r)
+            if relic.id != "NONE":
+                relics.append(relic)
 
         deck = []
         for _card_idx, count in enumerate(data.deck):
