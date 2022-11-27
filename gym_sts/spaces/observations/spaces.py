@@ -13,10 +13,11 @@ def generate_card_space():
 
 
 def generate_effect_space():
-    return Tuple(
-        [Dict({"sign": Discrete(2), "value": MultiBinary([constants.LOG_MAX_EFFECT])})]
-        * constants.NUM_EFFECTS
-    )
+    effect_space = Dict({
+        "sign": Discrete(2),
+        "value": MultiBinary(constants.LOG_MAX_EFFECT),
+    })
+    return Tuple([effect_space] * constants.NUM_EFFECTS)
 
 
 def generate_health_space():
