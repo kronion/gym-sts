@@ -40,6 +40,7 @@ def main():
         args.lib_dir, args.mods_dir, args.out_dir,
         headless=args.headless,
         animate=args.render,
+        reboot_on_error=True,
     )
     env.reset(seed=42)
     rng = random.Random(42)
