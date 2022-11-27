@@ -104,6 +104,7 @@ def make_auto_encoder(input_size: int, depth: int, width: int):
   return nn.Sequential(*layers)
 
 def main(_):
+  # download from https://drive.google.com/file/d/1R5eyUebTXsNJV4PCoDQE9lWfKxlWmsNs/view?usp=share_link
   with open(DATA.value, "rb") as f:
     column_major = pickle.load(f)
 
