@@ -7,7 +7,6 @@ RUN apt-get update &&  apt-get install -y \
     htop `: # useful diagnostic tool` \
     libopenal1 \
     openjdk-8-jre `: # java` \
-    python3 `: # python 3 (bare python is 2.7 in ubuntu)` \
     x11-xserver-utils \
     xvfb `: # virtual X screen` \
     scrot `: # utility to take screenshots`

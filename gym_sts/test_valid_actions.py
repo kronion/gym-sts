@@ -6,8 +6,13 @@ python -m ipdb -c c gym_sts/test_valid_actions.py
 """
 
 import argparse
+import os
+import pickle
 import random
 import time
+
+import numpy as np
+import tree
 
 from gym_sts.envs.action_validation import validate
 from gym_sts.envs.base import SlayTheSpireGymEnv
@@ -23,8 +28,10 @@ def main():
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--runtime", default=30, type=int)
-    parser.add_argument("--allow-invalid", action="store_true")
+    parser.add_argument("--allow_invalid", action="store_true")
     parser.add_argument("--screenshots", action="store_true")
+    parser.add_argument("--dump_states", action="store_true")
+
     args = parser.parse_args()
 
     if args.build_image:
@@ -43,6 +50,9 @@ def main():
 
     num_steps = 0
     start_time = time.perf_counter()
+
+    if args.dump_states:
+        states = []
 
     while True:
         if args.screenshots:
@@ -64,7 +74,7 @@ def main():
         action = rng.choice(actions)
         print(repr(action))
         try:
-            _, _, done, info = env.step(action._id)
+            serialized, _, done, info = env.step(action._id)
         except TimeoutError as e:
             run_time = time.perf_counter() - start_time
             print(f"Error on step {num_steps} after {run_time} seconds.")
@@ -74,6 +84,10 @@ def main():
             raise e
 
         assert info["had_error"] != want_valid
+
+        if args.dump_states:
+            states.append(serialized)
+            # assert env.observation_space.contains(serialized)
 
         if done:
             print("RESET")
@@ -86,6 +100,12 @@ def main():
 
     fps = num_steps / run_time
     print(f"fps: {fps}")
+
+    if args.dump_states:
+        states_file = os.path.join(args.out_dir, "states.pkl")
+        with open(states_file, 'wb') as f:
+            column_major = tree.map_structure(lambda *xs: np.array(xs), *states)
+            pickle.dump(column_major, f)
 
 
 if __name__ == "__main__":

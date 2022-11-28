@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
+import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 from pydantic import BaseModel
 
@@ -118,7 +119,7 @@ class CombatObs(ObsComponent):
 
         response = {
             "turn": turn,
-            "hand": hand,
+            "hand": np.array(hand, dtype=np.uint16),
             "energy": energy,
             "block": block,
             "effects": effects,

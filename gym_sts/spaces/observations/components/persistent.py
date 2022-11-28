@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
+import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import BaseModel, Field
 
@@ -22,12 +23,12 @@ class SerializedMap(BaseModel):
 
 def serialize_map(nodes: list[types.Node], boss: str) -> dict:
     empty_node = constants.ALL_MAP_LOCATIONS.index("NONE")
-    _nodes = [empty_node] * constants.NUM_MAP_NODES
-    edges = [0] * constants.NUM_MAP_EDGES
+    _nodes = np.full([constants.NUM_MAP_NODES], empty_node, dtype=np.uint8)
+    edges = np.zeros([constants.NUM_MAP_EDGES], dtype=bool)
 
     for node in nodes:
         x, y = node.x, node.y
-        index = constants.NUM_MAP_NODES_PER_ROW * y + x
+        node_index = constants.NUM_MAP_NODES_PER_ROW * y + x
         symbol = node.symbol
 
         if symbol == "E":
@@ -36,18 +37,16 @@ def serialize_map(nodes: list[types.Node], boss: str) -> dict:
                 symbol = "B"
 
         node_type = constants.ALL_MAP_LOCATIONS.index(symbol)
-        _nodes[index] = node_type
+        _nodes[node_index] = node_type
 
         if y < constants.NUM_MAP_ROWS - 1:
-            edge_index = (
-                constants.NUM_MAP_NODES_PER_ROW * y + x
-            ) * constants.NUM_MAP_EDGES_PER_NODE
+            edge_index = node_index * constants.NUM_MAP_EDGES_PER_NODE
 
             child_x_coords = [child.x for child in node.children]
 
             for coord in [x - 1, x, x + 1]:
                 if coord in child_x_coords:
-                    edges[edge_index] = 1
+                    edges[edge_index] = True
                 edge_index += 1
 
     _boss = constants.NORMAL_BOSSES.index(boss)
@@ -131,19 +130,19 @@ class PersistentStateObs(PydanticComponent):
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
         potions = [0] * constants.NUM_POTION_SLOTS
+        potions = np.zeros([constants.NUM_POTION_SLOTS], dtype=np.uint8)
 
         for i, potion in enumerate(self.potions):
             potions[i] = constants.ALL_POTIONS.index(potion.id)
 
-        _relics = [False] * constants.NUM_RELICS
+        relics = np.zeros([constants.NUM_RELICS], dtype=bool)
         for relic in self.relics:
-            _relics[constants.ALL_RELICS.index(relic.id)] = True
-        relics = [int(relic) for relic in _relics]
+            relics[constants.ALL_RELICS.index(relic.id)] = True
 
         deck = serializers.serialize_cards(self.deck)
 
         _keys = [self.keys.ruby, self.keys.emerald, self.keys.sapphire]
-        keys = [int(key) for key in _keys]
+        keys = np.array([int(key) for key in _keys])
 
         response = {
             "floor": floor,

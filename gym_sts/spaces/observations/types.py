@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Literal, Optional, Union
 
+import numpy as np
 from pydantic import BaseModel, Field, NonNegativeInt
 
 import gym_sts.spaces.constants.cards as card_consts
@@ -23,7 +24,7 @@ class Card(BaseModel):
     has_target: bool
 
     @staticmethod
-    def _serialize_binary(card_idx: int, upgrades: int) -> list[int]:
+    def _serialize_binary(card_idx: int, upgrades: int) -> np.ndarray:
         array = utils.to_binary_array(card_idx, card_consts.LOG_NUM_CARDS)
 
         # TODO support more than 1 upgrade
@@ -31,12 +32,12 @@ class Card(BaseModel):
         if upgrades > 0:
             upgrade_bit = [1]
 
-        array = upgrade_bit + array
+        array = np.concatenate([upgrade_bit, array], axis=0)
 
         return array
 
     @classmethod
-    def serialize_empty_binary(cls) -> list[int]:
+    def serialize_empty_binary(cls) -> np.ndarray:
         return cls._serialize_binary(0, 0)
 
     def serialize_discrete(self) -> int:
@@ -46,7 +47,7 @@ class Card(BaseModel):
 
         return card_idx
 
-    def serialize_binary(self) -> list[int]:
+    def serialize_binary(self) -> np.ndarray:
         card_idx = card_consts.CardCatalog.ids.index(self.id)
         return self._serialize_binary(card_idx, self.upgrades)
 

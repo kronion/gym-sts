@@ -31,8 +31,6 @@ class Receiver:
         Continues reading game state until the game is waiting for action from
         the agent
         """
-        print("Waiting to receive game state...")
-
         for _ in range(self.num_steps):
             message = self.fh.readline()
             if len(message) > 0:

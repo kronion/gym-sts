@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 from typing import Union
 
+import numpy as np
 from gym import spaces
 from pydantic import BaseModel
 
@@ -140,7 +141,7 @@ class Observation:
         return get_valid(self)
 
     def serialize(self) -> dict:
-        valid_action_mask = [False] * len(actions.ACTIONS)
+        valid_action_mask = np.zeros([len(actions.ACTIONS)], dtype=bool)
         for action in self.valid_actions:
             valid_action_mask[action._id] = True
 

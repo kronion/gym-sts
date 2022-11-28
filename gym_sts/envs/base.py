@@ -16,6 +16,7 @@ from docker.models.containers import Container
 
 from gym_sts import constants, exceptions
 from gym_sts.communication import Communicator
+from gym_sts.data.state_logger import StateLogger
 from gym_sts.spaces.actions import ACTION_SPACE, ACTIONS, Action
 from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
@@ -98,6 +99,11 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.observation_cache: Cache[Observation] = Cache()
 
+        # Create states directory
+        self.states_dir = self.output_dir / "states"
+        self.states_dir.mkdir(exist_ok=True)
+        self.state_logger: StateLogger = StateLogger(self.states_dir)
+
         atexit.register(self.close)
 
     @classmethod
@@ -155,7 +161,6 @@ class SlayTheSpireGymEnv(gym.Env):
         self.container = self.client.containers.run(
             image=constants.DOCKER_IMAGE_TAG,
             remove=True,
-            devices=["/dev/snd"],
             init=True,
             detach=True,
             volumes={
@@ -348,6 +353,9 @@ class SlayTheSpireGymEnv(gym.Env):
         assert obs.event_state.event_id == "Neow Event"
         self.observation_cache.append(obs)
 
+        # Send game's starting state to state logger
+        self.state_logger.log(None, obs)
+
         if params.return_info:
             info = {
                 "seed": self.seed,
@@ -403,6 +411,9 @@ class SlayTheSpireGymEnv(gym.Env):
             # the error field?
             obs = prev_obs
         else:
+            # Send observation to state logger
+            self.state_logger.log(action, obs)
+
             success = False
             for _ in range(10):
                 if len(obs.valid_actions) == 0:
@@ -470,6 +481,10 @@ class SlayTheSpireGymEnv(gym.Env):
         if latest_obs is None:
             raise RuntimeError("Game not started?")
         return latest_obs.valid_actions
+
+    def save_artifact(self, file_name):
+        # TODO: Implement uploading to WandB
+        raise NotImplementedError("Not implemented")
 
     def close(self) -> None:
         """
