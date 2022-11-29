@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def to_binary_array(n: int, digits: int) -> np.ndarray:
     array = [0] * digits
 

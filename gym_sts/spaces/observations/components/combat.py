@@ -3,32 +3,13 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+from gym.spaces import Dict, MultiBinary, MultiDiscrete, Tuple
 from pydantic import BaseModel
 
-import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
-
-
-def _generate_enemy_space() -> Dict:
-    return Dict(
-        {
-            "id": Discrete(constants.NUM_MONSTER_TYPES),
-            "intent": Discrete(constants.NUM_INTENTS),
-            "attack": Dict(
-                {
-                    "damage": MultiBinary(constants.LOG_MAX_ATTACK),
-                    "times": MultiBinary(constants.LOG_MAX_ATTACK_TIMES),
-                }
-            ),
-            "block": MultiBinary(constants.LOG_MAX_BLOCK),
-            "effects": spaces.generate_effect_space(),
-            "health": spaces.generate_health_space(),
-        }
-    )
 
 
 class CombatObs(ObsComponent):
@@ -82,14 +63,12 @@ class CombatObs(ObsComponent):
         return Dict(
             {
                 "turn": MultiBinary(constants.LOG_MAX_TURN),
-                "hand": MultiDiscrete(
-                    [card_consts.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
-                ),
+                "hand": Tuple([types.HandCard.space()] * constants.HAND_SIZE),
                 "energy": MultiBinary(constants.LOG_MAX_ENERGY),
                 "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
                 "block": MultiBinary(constants.LOG_MAX_BLOCK),
                 "effects": spaces.generate_effect_space(),
-                "enemies": Tuple([_generate_enemy_space()] * constants.NUM_ENEMIES),
+                "enemies": Tuple([types.Enemy.space()] * constants.NUM_ENEMIES),
                 "discard": spaces.generate_card_space(),
                 "draw": spaces.generate_card_space(),
                 "exhaust": spaces.generate_card_space(),
@@ -101,7 +80,7 @@ class CombatObs(ObsComponent):
         energy = utils.to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
         block = utils.to_binary_array(self.block, constants.LOG_MAX_BLOCK)
 
-        hand = [0] * constants.HAND_SIZE
+        hand = np.zeros([constants.HAND_SIZE], dtype=np.uint16)
         for i, card in enumerate(self.hand):
             card_idx = card.serialize_discrete()
             hand[i] = card_idx
@@ -119,7 +98,7 @@ class CombatObs(ObsComponent):
 
         response = {
             "turn": turn,
-            "hand": np.array(hand, dtype=np.uint16),
+            "hand": hand,
             "energy": energy,
             "block": block,
             "effects": effects,
@@ -140,6 +119,9 @@ class CombatObs(ObsComponent):
         effects: list[dict]
         orbs: list[int]
         enemies: list[dict]
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> CombatObs:
@@ -168,6 +150,9 @@ class CombatObs(ObsComponent):
             enemy = types.Enemy.deserialize(e)
             if enemy.id != "NONE":
                 instance.enemies.append(enemy)
+
+        # instance.hand = []
+        # for c in data.hand:
 
         # TODO cards
         # hand = ...

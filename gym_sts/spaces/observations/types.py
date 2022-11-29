@@ -4,14 +4,18 @@ from abc import ABC, abstractmethod
 from typing import Literal, Optional, Union
 
 import numpy as np
+import numpy.typing as npt
+from gym.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field, NonNegativeInt
+from typing_extensions import TypeAlias
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.observations import spaces
 
 from . import utils
 
-BinaryArray = list[int]
+BinaryArray: TypeAlias = npt.NDArray[np.uint]
 
 
 class Card(BaseModel):
@@ -85,6 +89,50 @@ class Card(BaseModel):
 class HandCard(Card):
     is_playable: bool
 
+    @staticmethod
+    def space() -> Dict:
+        return Dict(
+            {
+                "card": MultiBinary(card_consts.LOG_NUM_CARDS_WITH_UPGRADES),
+                "is_playable": Discrete(2),
+            }
+        )
+
+    def serialize_discrete(self):
+        raise NotImplementedError("Use serialize() instead")
+
+    def serialize_binary(self):
+        raise NotImplementedError("Use serialize() instead")
+
+    def serialize(self) -> dict:
+        return {
+            "card": super().serialize_binary(),
+            "is_playable": int(self.is_playable),
+        }
+
+    @classmethod
+    def deserialize_discrete(cls):
+        raise NotImplementedError("Use deserialize() instead")
+
+    @classmethod
+    def deserialize_binary(cls):
+        raise NotImplementedError("Use deserialize() instead")
+
+    class SerializedState(BaseModel):
+        card: BinaryArray
+        is_playable: int = Field(..., ge=0, le=1)
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> HandCard:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        card = Card.deserialize_binary(data.card)
+        return cls(**card.dict(), is_playable=bool(data.is_playable))
+
 
 class Potion(BaseModel):
     id: str
@@ -156,6 +204,9 @@ class ShopCard(Card, ShopMixin):
         card: BinaryArray
         price: BinaryArray
 
+        class Config:
+            arbitrary_types_allowed = True
+
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> ShopCard:
         if not isinstance(data, cls.SerializedState):
@@ -178,6 +229,9 @@ class ShopPotion(Potion, ShopMixin):
     class SerializedState(BaseModel):
         potion: int
         price: BinaryArray
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(  # type: ignore[override]
@@ -203,6 +257,9 @@ class ShopRelic(Relic, ShopMixin):
     class SerializedState(BaseModel):
         relic: int
         price: BinaryArray
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(  # type: ignore[override]
@@ -353,6 +410,9 @@ class Effect(BaseModel):
         sign: int = Field(..., ge=0, le=1)
         value: BinaryArray
 
+        class Config:
+            arbitrary_types_allowed = True
+
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> Effect:
         if not isinstance(data, cls.SerializedState):
@@ -395,6 +455,9 @@ class Health(BaseModel):
         hp: BinaryArray
         max_hp: BinaryArray
 
+        class Config:
+            arbitrary_types_allowed = True
+
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> Health:
         if not isinstance(data, cls.SerializedState):
@@ -410,6 +473,15 @@ class Attack(BaseModel):
     damage: int = Field(..., ge=0, lt=2**constants.LOG_MAX_ATTACK)
     times: int = Field(..., ge=0, lt=2**constants.LOG_MAX_ATTACK_TIMES)
 
+    @staticmethod
+    def space() -> Dict:
+        return Dict(
+            {
+                "damage": MultiBinary(constants.LOG_MAX_ATTACK),
+                "times": MultiBinary(constants.LOG_MAX_ATTACK_TIMES),
+            }
+        )
+
     def serialize(self):
         return {
             "damage": utils.to_binary_array(self.damage, constants.LOG_MAX_ATTACK),
@@ -419,6 +491,9 @@ class Attack(BaseModel):
     class SerializedState(BaseModel):
         damage: BinaryArray
         times: BinaryArray
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> Attack:
@@ -447,6 +522,19 @@ class Enemy(BaseModel):
     times: int = Field(
         0, alias="move_hits", ge=0, lt=2**constants.LOG_MAX_ATTACK_TIMES
     )
+
+    @staticmethod
+    def space() -> Dict:
+        return Dict(
+            {
+                "id": Discrete(constants.NUM_MONSTER_TYPES),
+                "intent": Discrete(constants.NUM_INTENTS),
+                "attack": Attack.space(),
+                "block": MultiBinary(constants.LOG_MAX_BLOCK),
+                "effects": spaces.generate_effect_space(),
+                "health": spaces.generate_health_space(),
+            }
+        )
 
     @staticmethod
     def serialize_empty() -> dict:
@@ -480,6 +568,9 @@ class Enemy(BaseModel):
         block: BinaryArray
         effects: list[dict]
         health: Health.SerializedState
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> Enemy:

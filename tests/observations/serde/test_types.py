@@ -1,3 +1,4 @@
+import numpy as np
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -11,7 +12,7 @@ def test_card_empty_binary_serde():
     card = types.Card.deserialize_binary(initial_ser)
     final_ser = card.serialize_binary()
 
-    assert initial_ser == final_ser
+    assert np.array_equal(initial_ser, final_ser)
 
 
 @given(st.builds(types.Card, id=st.sampled_from(CardCatalog.ids)))
@@ -20,6 +21,19 @@ def test_card_binary_serde(card: types.Card):
     de = card.deserialize_binary(ser)
 
     assert card.id == de.id
+
+    # Really de.upgrades should equal card.upgrades, but it doesn't because our current
+    # serialization doesn't support more than one upgrades
+    assert card.upgrades == de.upgrades == 0 or card.upgrades > 0 and de.upgrades > 0
+
+
+@given(st.builds(types.HandCard, id=st.sampled_from(CardCatalog.ids)))
+def test_hand_card_serde(card: types.HandCard):
+    ser = card.serialize()
+    de = card.deserialize(ser)
+
+    assert card.id == de.id
+    assert card.is_playable == de.is_playable
 
     # Really de.upgrades should equal card.upgrades, but it doesn't because our current
     # serialization doesn't support more than one upgrades

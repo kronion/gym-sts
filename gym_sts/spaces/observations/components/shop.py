@@ -16,6 +16,9 @@ class SerializedPurge(BaseModel):
     available: int
     price: types.BinaryArray
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 class ShopObs(PydanticComponent):
     cards: list[types.ShopCard] = []

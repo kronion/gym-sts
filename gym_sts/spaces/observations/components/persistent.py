@@ -20,6 +20,9 @@ class SerializedMap(BaseModel):
     edges: types.BinaryArray
     boss: int
 
+    class Config:
+        arbitrary_types_allowed = True
+
 
 def serialize_map(nodes: list[types.Node], boss: str) -> dict:
     empty_node = constants.ALL_MAP_LOCATIONS.index("NONE")
@@ -170,6 +173,9 @@ class PersistentStateObs(PydanticComponent):
         keys: types.BinaryArray
         act_map: SerializedMap = Field(..., alias="map")
         screen_type: int
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> PersistentStateObs:
