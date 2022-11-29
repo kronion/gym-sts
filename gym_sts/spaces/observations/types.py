@@ -7,13 +7,17 @@ import numpy as np
 import numpy.typing as npt
 from gym.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field, NonNegativeInt
-from typing_extensions import TypeAlias
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import spaces
 
 from . import utils
+
+try:
+    from typing import TypeAlias
+except ImportError:
+    from typing_extensions import TypeAlias
 
 BinaryArray: TypeAlias = npt.NDArray[np.uint]
 
