@@ -14,12 +14,8 @@ from gym_sts.spaces.observations import spaces
 
 from . import utils
 
-try:
-    from typing import TypeAlias
-except ImportError:
-    from typing_extensions import TypeAlias
 
-BinaryArray: TypeAlias = npt.NDArray[np.uint]
+BinaryArray = npt.NDArray[np.uint]
 
 
 class Card(BaseModel):
@@ -195,13 +191,13 @@ class ShopCard(Card, ShopMixin):
         raise NotImplementedError("Use serialize() instead")
 
     @classmethod
-    def serialize_empty(cls) -> dict[str, list[int]]:
+    def serialize_empty(cls) -> dict[str, npt.NDArray[np.uint]]:
         return {
             "card": Card.serialize_empty_binary(),
             "price": cls.serialize_empty_price(),
         }
 
-    def serialize(self) -> dict[str, list[int]]:
+    def serialize(self) -> dict[str, npt.NDArray[np.uint]]:
         return {"card": super().serialize_binary(), "price": self.serialize_price()}
 
     class SerializedState(BaseModel):

@@ -12,6 +12,7 @@ from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import PydanticComponent
 
+
 # from .map import MapObs
 
 
@@ -132,7 +133,6 @@ class PersistentStateObs(PydanticComponent):
         health = types.Health(hp=self.hp, max_hp=self.max_hp).serialize()
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
-        potions = [0] * constants.NUM_POTION_SLOTS
         potions = np.zeros([constants.NUM_POTION_SLOTS], dtype=np.uint8)
 
         for i, potion in enumerate(self.potions):
