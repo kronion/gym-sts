@@ -57,7 +57,22 @@ class Card(BaseModel):
 
     @classmethod
     def deserialize_discrete(cls, raw_data: int) -> Card:
-        pass
+        card_idx, upgraded = divmod(raw_data, 2)
+        card_id = card_consts.CardCatalog.ids[card_idx]
+        card_meta: card_consts.CardMetadata = getattr(card_consts.CardCatalog, card_id)
+        card_props = card_meta.upgraded if upgraded else card_meta.unupgraded
+
+        return cls(
+            id=card_id,
+            name=card_meta.name,
+            # TODO may be wrong because we don't currently serialize cost
+            cost=card_props.default_cost,
+            exhausts=card_props.exhausts,
+            ethereal=card_props.ethereal,
+            has_target=card_props.has_target,
+            # TODO may be wrong for cards that can be upgraded 2+ times
+            upgrades=upgraded,
+        )
 
     @classmethod
     def deserialize_binary(cls, raw_data: BinaryArray) -> Card:
@@ -97,6 +112,13 @@ class HandCard(Card):
                 "is_playable": Discrete(2),
             }
         )
+
+    @classmethod
+    def serialize_empty(cls) -> dict:
+        return {
+            "card": super().serialize_empty_binary(),
+            "is_playable": 0,
+        }
 
     def serialize_discrete(self):
         raise NotImplementedError("Use serialize() instead")
@@ -591,9 +613,9 @@ class Enemy(BaseModel):
             id=constants.ALL_MONSTER_TYPES[data.id],
             intent=constants.ALL_INTENTS[data.intent],
             block=utils.from_binary_array(data.block),
-            effects=effects,
+            powers=effects,
             current_hp=health.hp,
             max_hp=health.max_hp,
-            damage=attack.damage,
-            times=attack.times,
+            move_adjusted_damage=attack.damage,
+            move_hits=attack.times,
         )

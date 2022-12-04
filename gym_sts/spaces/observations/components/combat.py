@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
+import numpy.typing as npt
 from gym.spaces import Dict, MultiBinary, MultiDiscrete, Tuple
 from pydantic import BaseModel
 
 from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants.cards import CardCatalog
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
@@ -80,9 +82,9 @@ class CombatObs(ObsComponent):
         energy = utils.to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
         block = utils.to_binary_array(self.block, constants.LOG_MAX_BLOCK)
 
-        hand = np.zeros([constants.HAND_SIZE], dtype=np.uint16)
+        hand = [types.HandCard.serialize_empty()] * constants.HAND_SIZE
         for i, card in enumerate(self.hand):
-            card_idx = card.serialize_discrete()
+            card_idx = card.serialize()
             hand[i] = card_idx
 
         effects = types.Effect.serialize_all(self.effects)
@@ -113,12 +115,15 @@ class CombatObs(ObsComponent):
 
     class SerializedState(BaseModel):
         turn: types.BinaryArray
-        hand: list[int]
+        hand: list[types.HandCard.SerializedState]
         energy: types.BinaryArray
         block: types.BinaryArray
         effects: list[dict]
-        orbs: list[int]
+        orbs: npt.NDArray[np.uint]
         enemies: list[dict]
+        discard: npt.NDArray[np.uint]
+        draw: npt.NDArray[np.uint]
+        exhaust: npt.NDArray[np.uint]
 
         class Config:
             arbitrary_types_allowed = True
@@ -143,7 +148,11 @@ class CombatObs(ObsComponent):
                 effect.id = constants.ALL_EFFECTS[effect_idx]
                 instance.effects.append(effect)
 
-        instance.orbs = [types.Orb.deserialize(orb) for orb in data.orbs]
+        instance.orbs = []
+        for o in data.orbs:
+            orb = types.Orb.deserialize(o)
+            if orb.id != "NONE":
+                instance.orbs.append(orb)
 
         instance.enemies = []
         for e in data.enemies:
@@ -151,10 +160,55 @@ class CombatObs(ObsComponent):
             if enemy.id != "NONE":
                 instance.enemies.append(enemy)
 
-        # instance.hand = []
-        # for c in data.hand:
+        instance.hand = []
+        for hc in data.hand:
+            hand_card = types.HandCard.deserialize(hc)
+            if hand_card.id != CardCatalog.NONE.id:
+                instance.hand.append(hand_card)
 
-        # TODO cards
-        # hand = ...
+        instance.discard = []
+        for discard_idx, count in enumerate(data.discard):
+            discard = types.Card.deserialize_discrete(discard_idx)
+            if discard.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.discard.append(discard)
+
+        instance.draw = []
+        for draw_idx, count in enumerate(data.draw):
+            draw = types.Card.deserialize_discrete(draw_idx)
+            if draw.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.draw.append(draw)
+
+        instance.exhaust = []
+        for exhaust_idx, count in enumerate(data.exhaust):
+            exhaust = types.Card.deserialize_discrete(exhaust_idx)
+            if exhaust.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.exhaust.append(exhaust)
 
         return instance
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CombatObs):
+            return False
+
+        attrs = [
+            "turn",
+            "hand",
+            "energy",
+            "block",
+            "effects",
+            "orbs",
+            "enemies",
+            "discard",
+            "draw",
+            "exhaust",
+        ]
+
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                breakpoint()
+                return False
+
+        return True
