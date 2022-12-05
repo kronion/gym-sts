@@ -308,9 +308,36 @@ class Reward(BaseModel, ABC):
             "value": utils.to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
         }
 
+    class SerializedState(BaseModel):
+        type: int
+        value: BinaryArray
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> Reward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        type_str = constants.ALL_REWARD_TYPES[data.type]
+
+        if type_str == "GOLD":
+            return GoldReward.deserialize(data)
+        elif type_str == "POTION":
+            return PotionReward.deserialize(data)
+        elif type_str == "RELIC":
+            return RelicReward.deserialize(data)
+        elif type_str == "CARD":
+            return CardReward.deserialize(data)
+        elif type_str == "KEY":
+            return KeyReward.deserialize(data)
+        else:
+            raise ValueError(f"Unrecognized reward type {type_str}")
+
 
 class GoldReward(Reward):
-    value: int
+    value: int = Field(..., ge=0, lt=2**constants.COMBAT_REWARD_LOG_MAX_ID)
 
     def serialize(self) -> dict:
         return {
@@ -319,6 +346,15 @@ class GoldReward(Reward):
                 self.value, constants.COMBAT_REWARD_LOG_MAX_ID
             ),
         }
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, Reward.SerializedState]) -> GoldReward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        value = utils.from_binary_array(data.value)
+
+        return cls(value=value)
 
 
 class PotionReward(Reward):
@@ -333,6 +369,16 @@ class PotionReward(Reward):
             ),
         }
 
+    @classmethod
+    def deserialize(cls, data: Union[dict, Reward.SerializedState]) -> PotionReward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        potion_idx = utils.from_binary_array(data.value)
+        potion = Potion.deserialize(potion_idx)
+
+        return cls(value=potion)
+
 
 class RelicReward(Reward):
     value: Relic
@@ -346,6 +392,16 @@ class RelicReward(Reward):
             ),
         }
 
+    @classmethod
+    def deserialize(cls, data: Union[dict, Reward.SerializedState]) -> RelicReward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        relic_idx = utils.from_binary_array(data.value)
+        relic = Relic.deserialize(relic_idx)
+
+        return cls(value=relic)
+
 
 class CardReward(Reward):
     def serialize(self) -> dict:
@@ -354,6 +410,13 @@ class CardReward(Reward):
             "value": utils.to_binary_array(0, constants.COMBAT_REWARD_LOG_MAX_ID),
         }
 
+    @classmethod
+    def deserialize(cls, data: Union[dict, Reward.SerializedState]) -> CardReward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        return cls()
+
 
 class KeyReward(Reward):
     value: str
@@ -361,11 +424,19 @@ class KeyReward(Reward):
     def serialize(self) -> dict:
         key_idx = constants.ALL_KEYS.index(self.value)
         return {
-            "ty  # e.g. charge battery's effectpe": constants.ALL_REWARD_TYPES.index(
-                "KEY"
-            ),
+            "type": constants.ALL_REWARD_TYPES.index("KEY"),
             "value": utils.to_binary_array(key_idx, constants.COMBAT_REWARD_LOG_MAX_ID),
         }
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, Reward.SerializedState]) -> KeyReward:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        key_idx = utils.from_binary_array(data.value)
+        key = constants.ALL_KEYS[key_idx]
+
+        return cls(value=key)
 
 
 class Keys(BaseModel):

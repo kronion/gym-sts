@@ -124,3 +124,59 @@ def test_enemy_serde(enemy: types.Enemy):
     de = enemy.deserialize(ser)
 
     assert enemy == de
+
+
+@given(st.builds(types.GoldReward))
+def test_gold_reward_serde(reward: types.GoldReward):
+    ser = reward.serialize()
+    de = reward.deserialize(ser)
+
+    assert reward == de
+
+
+@st.composite
+def create_potion_reward(
+    draw, elements=st.builds(types.Potion, id=st.sampled_from(constants.ALL_POTIONS))
+):
+    potion = draw(elements)
+    return types.PotionReward(value=potion)
+
+
+@given(create_potion_reward())
+def test_potion_reward_serde(reward: types.PotionReward):
+    ser = reward.serialize()
+    de = reward.deserialize(ser)
+
+    assert reward == de
+
+
+@st.composite
+def create_relic_reward(
+    draw, elements=st.builds(types.Relic, id=st.sampled_from(constants.ALL_RELICS))
+):
+    relic = draw(elements)
+    return types.RelicReward(value=relic)
+
+
+@given(create_relic_reward())
+def test_relic_reward_serde(reward: types.RelicReward):
+    ser = reward.serialize()
+    de = reward.deserialize(ser)
+
+    assert reward == de
+
+
+@given(st.builds(types.CardReward))
+def test_card_reward_serde(reward: types.CardReward):
+    ser = reward.serialize()
+    de = reward.deserialize(ser)
+
+    assert reward == de
+
+
+@given(st.builds(types.KeyReward, value=st.sampled_from(constants.ALL_KEYS)))
+def test_key_reward_serde(reward: types.KeyReward):
+    ser = reward.serialize()
+    de = reward.deserialize(ser)
+
+    assert reward == de

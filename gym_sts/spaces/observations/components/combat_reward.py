@@ -1,4 +1,9 @@
+from __future__ import annotations
+
+from typing import Union
+
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
+from pydantic import BaseModel
 
 from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import types
@@ -67,3 +72,20 @@ class CombatRewardObs(ObsComponent):
         for i, reward in enumerate(self.rewards):
             serialized[i] = reward.serialize()
         return serialized
+
+    class SerializedState(BaseModel):
+        pass
+
+    @classmethod
+    def deserialize(
+        cls, data: list[Union[dict, types.RelicReward.SerializedState]]
+    ) -> CombatRewardObs:
+        rewards = []
+        for r in data:
+            reward = types.Reward.deserialize(r)
+            rewards.append(reward)
+
+        instance = cls({})
+        instance.rewards = rewards
+
+        return instance
