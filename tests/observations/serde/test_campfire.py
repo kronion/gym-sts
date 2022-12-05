@@ -3,7 +3,7 @@ import time
 from gym_sts.envs.base import SlayTheSpireGymEnv
 
 
-def test_combat_serde(env: SlayTheSpireGymEnv):
+def test_campfire_serde(env: SlayTheSpireGymEnv):
     env.reset(seed=42)
 
     # Neow event

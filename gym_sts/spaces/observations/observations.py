@@ -55,7 +55,10 @@ class Observation:
             campfire_state = screen_state if screen_type == ScreenType.REST else {}
             self.campfire_state = components.CampfireObs(campfire_state)
 
-            self.card_reward_state = components.CardRewardObs(state)
+            card_reward_state = (
+                screen_state if screen_type == ScreenType.CARD_REWARD else {}
+            )
+            self.card_reward_state = components.CardRewardObs(**card_reward_state)
             self.combat_reward_state = components.CombatRewardObs(state)
             self.event_state = components.EventStateObs(state)
 

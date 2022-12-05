@@ -1,31 +1,22 @@
+from __future__ import annotations
+
+from typing import Union
+
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
-from pydantic import parse_obj_as
+from pydantic import BaseModel, Field
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants.cards import CardCatalog
 from gym_sts.spaces.observations import types
 
-from .base import ObsComponent
+from .base import PydanticComponent
 
 
-class CardRewardObs(ObsComponent):
-    def __init__(self, state: dict):
-        # Sane defaults
-        self.cards = []
-        self.singing_bowl = False
-        self.skippable = False
-
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if (
-                "screen_type" in game_state
-                and game_state["screen_type"] == "CARD_REWARD"
-            ):
-
-                screen_state = game_state["screen_state"]
-                self.cards = parse_obj_as(list[types.Card], screen_state["cards"])
-                self.singing_bowl = screen_state["bowl_available"]
-                self.skippable = screen_state["skip_available"]
+class CardRewardObs(PydanticComponent):
+    cards: list[types.Card] = []
+    singing_bowl: bool = Field(False, alias="bowl_available")
+    skippable: bool = Field(False, alias="skip_available")
 
     @staticmethod
     def space():
@@ -57,3 +48,27 @@ class CardRewardObs(ObsComponent):
             "singing_bowl": int(self.singing_bowl),
             "skippable": int(self.skippable),
         }
+
+    class SerializedState(BaseModel):
+        cards: list[types.BinaryArray]
+        singing_bowl: int
+        skippable: int
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> CardRewardObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        cards = []
+        for c in data.cards:
+            card = types.Card.deserialize_binary(c)
+            if card.id != CardCatalog.NONE.id:
+                cards.append(card)
+
+        singing_bowl = bool(data.singing_bowl)
+        skippable = bool(data.skippable)
+
+        return cls(cards=cards, bowl_available=singing_bowl, skip_available=skippable)
