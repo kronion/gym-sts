@@ -6,7 +6,7 @@ from typing import Literal, Optional, Union
 import numpy as np
 import numpy.typing as npt
 from gym.spaces import Dict, Discrete, MultiBinary
-from pydantic import BaseModel, Field, NonNegativeInt
+from pydantic import BaseModel, Field, NonNegativeInt, validator
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces import old_constants as constants
@@ -544,6 +544,10 @@ class Enemy(BaseModel):
     times: int = Field(
         0, alias="move_hits", ge=0, lt=2**constants.LOG_MAX_ATTACK_TIMES
     )
+
+    @validator("damage", pre=True)
+    def must_be_nonnegative(cls, v: int) -> int:
+        return max(0, v)
 
     @staticmethod
     def space() -> Dict:

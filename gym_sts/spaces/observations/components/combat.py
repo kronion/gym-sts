@@ -208,7 +208,6 @@ class CombatObs(ObsComponent):
 
         for attr in attrs:
             if getattr(self, attr) != getattr(other, attr):
-                breakpoint()
                 return False
 
         return True

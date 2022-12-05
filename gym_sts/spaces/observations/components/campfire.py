@@ -76,3 +76,22 @@ class CampfireObs(ObsComponent):
         instance.recall = bool(data.recall)
 
         return instance
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CampfireObs):
+            return False
+
+        attrs = [
+            "rest",
+            "smith",
+            "lift",
+            "toke",
+            "dig",
+            "recall",
+        ]
+
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+
+        return True
