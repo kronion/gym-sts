@@ -1776,7 +1776,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9, <3.11"  # Tensorflow requires <3.11
-content-hash = "bcd78341488e3432118d24c2ddbf6ba7bb530a5d966b0e4c747d1c21d3cd876e"
+content-hash = "abe07e5c2302d75ed465735a6f9d178f567efc9aea52ec276079a8457eda143d"
 
 [metadata.files]
 absl-py = [
