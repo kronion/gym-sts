@@ -82,7 +82,10 @@ class CombatRewardObs(ObsComponent):
     ) -> CombatRewardObs:
         rewards = []
         for r in data:
-            reward = types.Reward.deserialize(r)
+            try:
+                reward = types.Reward.deserialize(r)
+            except types.Reward.NotDeserializable:
+                continue
             rewards.append(reward)
 
         instance = cls({})

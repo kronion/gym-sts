@@ -315,6 +315,9 @@ class Reward(BaseModel, ABC):
         class Config:
             arbitrary_types_allowed = True
 
+    class NotDeserializable(Exception):
+        pass
+
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> Reward:
         if not isinstance(data, cls.SerializedState):
@@ -332,6 +335,8 @@ class Reward(BaseModel, ABC):
             return CardReward.deserialize(data)
         elif type_str == "KEY":
             return KeyReward.deserialize(data)
+        elif type_str == "NONE":
+            raise cls.NotDeserializable()
         else:
             raise ValueError(f"Unrecognized reward type {type_str}")
 
