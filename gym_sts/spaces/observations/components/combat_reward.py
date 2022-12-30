@@ -5,7 +5,7 @@ from typing import Union
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import BaseModel
 
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.rewards as reward_consts
 from gym_sts.spaces.observations import types
 
 from .base import ObsComponent
@@ -39,12 +39,12 @@ class CombatRewardObs(ObsComponent):
     def space():
         combat_reward_item = Dict(
             {
-                "type": Discrete(constants.NUM_REWARD_TYPES),
+                "type": Discrete(reward_consts.NUM_REWARD_TYPES),
                 # Could be a gold value, a relic ID, the color of a key, or a potion ID
-                "value": MultiBinary(constants.COMBAT_REWARD_LOG_MAX_ID),
+                "value": MultiBinary(reward_consts.COMBAT_REWARD_LOG_MAX_ID),
             }
         )
-        return Tuple([combat_reward_item] * constants.MAX_NUM_REWARDS)
+        return Tuple([combat_reward_item] * reward_consts.MAX_NUM_REWARDS)
 
     @staticmethod
     def _parse_reward(reward: dict):
@@ -53,7 +53,7 @@ class CombatRewardObs(ObsComponent):
         if reward_type in ["GOLD", "STOLEN_GOLD"]:
             return types.GoldReward(value=reward["gold"])
         elif reward_type == "POTION":
-            potion = types.Potion(**reward["potion"])
+            potion = types.PotionBase(**reward["potion"])
             return types.PotionReward(value=potion)
         elif reward_type == "RELIC":
             relic = types.Relic(**reward["relic"])
@@ -68,7 +68,7 @@ class CombatRewardObs(ObsComponent):
             raise ValueError(f"Unrecognized reward type {reward_type}")
 
     def serialize(self) -> list[dict]:
-        serialized = [types.Reward.serialize_empty()] * constants.MAX_NUM_REWARDS
+        serialized = [types.Reward.serialize_empty()] * reward_consts.MAX_NUM_REWARDS
         for i, reward in enumerate(self.rewards):
             serialized[i] = reward.serialize()
         return serialized
@@ -78,7 +78,7 @@ class CombatRewardObs(ObsComponent):
 
     @classmethod
     def deserialize(
-        cls, data: list[Union[dict, types.RelicReward.SerializedState]]
+        cls, data: Union[list[dict], list[types.RelicReward.SerializedState]]
     ) -> CombatRewardObs:
         rewards = []
         for r in data:
@@ -92,3 +92,15 @@ class CombatRewardObs(ObsComponent):
         instance.rewards = rewards
 
         return instance
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CombatRewardObs):
+            return False
+
+        attrs = ["rewards"]
+
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+
+        return True

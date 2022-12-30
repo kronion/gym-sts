@@ -6,7 +6,7 @@ from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import BaseModel, Field
 
 import gym_sts.spaces.constants.cards as card_consts
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.rewards as reward_consts
 from gym_sts.spaces.constants.cards import CardCatalog
 from gym_sts.spaces.observations import types
 
@@ -38,10 +38,10 @@ class CardRewardObs(PydanticComponent):
 
     def serialize(self) -> dict:
         serialized_cards = [
-            types.Card.serialize_empty_binary()
-        ] * constants.REWARD_CARD_COUNT
+            types.Card.serialize_empty()
+        ] * reward_consts.REWARD_CARD_COUNT
         for i, card in enumerate(self.cards):
-            serialized_cards[i] = card.serialize_binary()
+            serialized_cards[i] = card.serialize()
 
         return {
             "cards": serialized_cards,
@@ -64,7 +64,7 @@ class CardRewardObs(PydanticComponent):
 
         cards = []
         for c in data.cards:
-            card = types.Card.deserialize_binary(c)
+            card = types.Card.deserialize(c)
             if card.id != CardCatalog.NONE.id:
                 cards.append(card)
 

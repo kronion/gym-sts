@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
-from pydantic import BaseModel, Field
+from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+from pydantic import BaseModel, Field, validator
 
+import gym_sts.spaces.constants.relics as relic_consts
 from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.constants.cards import CardCatalog, CardMetadata
 from gym_sts.spaces.observations import serializers, spaces, types, utils
@@ -17,7 +18,7 @@ from .base import PydanticComponent
 
 
 class SerializedMap(BaseModel):
-    nodes: list[int]
+    nodes: types.BinaryArray
     edges: types.BinaryArray
     boss: int
 
@@ -80,6 +81,8 @@ def deserialize_map(data: SerializedMap):
             for i, coord in enumerate([x - 1, x, x + 1]):
                 if data.edges[edge_index + i]:
                     children.append({"x": coord, "y": y + 1})
+        else:
+            children.append({"x": 3, "y": y + 2})
 
         nodes.append({"symbol": node_type, "children": children, "x": x, "y": y})
 
@@ -101,6 +104,11 @@ class PersistentStateObs(PydanticComponent):
     act_boss: str = "NONE"  # TODO use enum
     screen_type: constants.ScreenType = constants.ScreenType.EMPTY
 
+    @validator("deck")
+    def ensure_sorted(cls, v: list[types.Card]) -> list[types.Card]:
+        v.sort()
+        return v
+
     @staticmethod
     def space():
         return Dict(
@@ -108,11 +116,11 @@ class PersistentStateObs(PydanticComponent):
                 "floor": MultiBinary(constants.LOG_NUM_FLOORS),
                 "health": spaces.generate_health_space(),
                 "gold": MultiBinary(constants.LOG_MAX_GOLD),
-                "potions": MultiDiscrete(
-                    [constants.NUM_POTIONS] * constants.NUM_POTION_SLOTS
-                ),
+                "potions": Tuple([types.Potion.space()] * constants.NUM_POTION_SLOTS),
                 # TODO @kronion add counters and usages (e.g. lizard tail) to relics
-                "relics": MultiBinary(constants.NUM_RELICS),
+                "relics": MultiBinary(
+                    [relic_consts.NUM_RELICS, relic_consts.LOG_MAX_COUNTER]
+                ),
                 "deck": spaces.generate_card_space(),
                 "keys": MultiBinary(constants.NUM_KEYS),
                 "map": Dict(
@@ -133,19 +141,22 @@ class PersistentStateObs(PydanticComponent):
         health = types.Health(hp=self.hp, max_hp=self.max_hp).serialize()
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
-        potions = np.zeros([constants.NUM_POTION_SLOTS], dtype=np.uint8)
+        potions = [types.Potion.serialize_empty()] * constants.NUM_POTION_SLOTS
 
         for i, potion in enumerate(self.potions):
-            potions[i] = constants.ALL_POTIONS.index(potion.id)
+            potions[i] = potion.serialize()
 
-        relics = np.zeros([constants.NUM_RELICS], dtype=bool)
+        relics = np.zeros(
+            [relic_consts.NUM_RELICS, relic_consts.LOG_MAX_COUNTER], dtype=bool
+        )
+
         for relic in self.relics:
-            relics[constants.ALL_RELICS.index(relic.id)] = True
+            ser = relic.serialize()
+            relics[ser["id"]] = ser["counter"]
 
         deck = serializers.serialize_cards(self.deck)
 
-        _keys = [self.keys.ruby, self.keys.emerald, self.keys.sapphire]
-        keys = np.array([int(key) for key in _keys])
+        keys = self.keys.serialize()
 
         response = {
             "floor": floor,
@@ -167,9 +178,9 @@ class PersistentStateObs(PydanticComponent):
         floor: types.BinaryArray
         health: types.Health.SerializedState
         gold: types.BinaryArray
-        potions: list[int]
+        potions: list[types.Potion.SerializedState]
         relics: types.BinaryArray
-        deck: list[int]
+        deck: types.BinaryArray
         keys: types.BinaryArray
         act_map: SerializedMap = Field(..., alias="map")
         screen_type: int
@@ -194,9 +205,14 @@ class PersistentStateObs(PydanticComponent):
                 potions.append(potion)
 
         relics = []
-        for r in data.relics:
-            relic = types.Relic.deserialize(r)
-            if relic.id != "NONE":
+        relic_df = data.relics.reshape((relic_consts.NUM_RELICS, -1))
+        for idx, r in enumerate(relic_df):
+            relic_data = {
+                "id": idx,
+                "counter": r,
+            }
+            relic = types.Relic.deserialize(relic_data)
+            if relic.id != relic_consts.RelicCatalog.NONE.id and relic.counter > 0:
                 relics.append(relic)
 
         deck = []
@@ -221,8 +237,7 @@ class PersistentStateObs(PydanticComponent):
                     )
                     deck.append(card)
 
-        ruby, emerald, sapphire = data.keys
-        keys = types.Keys(ruby=ruby, emerald=emerald, sapphire=sapphire)
+        keys = types.Keys.deserialize(data.keys)
         act_map, act_boss = deserialize_map(data.act_map)
         screen_type = list(constants.ScreenType.__members__)[data.screen_type]
 

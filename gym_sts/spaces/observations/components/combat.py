@@ -43,8 +43,11 @@ class CombatObs(ObsComponent):
 
             self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
             self.discard = [types.Card(**card) for card in combat_state["discard_pile"]]
+            self.discard.sort()
             self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
+            self.draw.sort()
             self.exhaust = [types.Card(**card) for card in combat_state["exhaust_pile"]]
+            self.exhaust.sort()
 
             self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
 
@@ -168,21 +171,21 @@ class CombatObs(ObsComponent):
 
         instance.discard = []
         for discard_idx, count in enumerate(data.discard):
-            discard = types.Card.deserialize_discrete(discard_idx)
+            discard = types.Card.deserialize(discard_idx)
             if discard.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.discard.append(discard)
 
         instance.draw = []
         for draw_idx, count in enumerate(data.draw):
-            draw = types.Card.deserialize_discrete(draw_idx)
+            draw = types.Card.deserialize(draw_idx)
             if draw.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.draw.append(draw)
 
         instance.exhaust = []
         for exhaust_idx, count in enumerate(data.exhaust):
-            exhaust = types.Card.deserialize_discrete(exhaust_idx)
+            exhaust = types.Card.deserialize(exhaust_idx)
             if exhaust.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.exhaust.append(exhaust)

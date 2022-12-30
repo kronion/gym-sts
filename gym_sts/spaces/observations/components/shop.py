@@ -6,7 +6,7 @@ from gym.spaces import Dict, Discrete, MultiBinary, Space, Tuple
 from pydantic import BaseModel
 
 import gym_sts.spaces.constants.cards as card_consts
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.shop as shop_consts
 from gym_sts.spaces.observations import types, utils
 
 from .base import PydanticComponent
@@ -38,38 +38,22 @@ class ShopObs(PydanticComponent):
                                 "card": MultiBinary(
                                     card_consts.LOG_NUM_CARDS_WITH_UPGRADES
                                 ),
-                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                                "price": MultiBinary(shop_consts.SHOP_LOG_MAX_PRICE),
                             }
                         )
                     ]
-                    * constants.SHOP_CARD_COUNT,
+                    * shop_consts.SHOP_CARD_COUNT,
                 ),
                 "relics": Tuple(
-                    [
-                        Dict(
-                            {
-                                "relic": Discrete(constants.NUM_RELICS),
-                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
-                            }
-                        )
-                    ]
-                    * constants.SHOP_RELIC_COUNT
+                    [types.ShopRelic.space()] * shop_consts.SHOP_RELIC_COUNT
                 ),
                 "potions": Tuple(
-                    [
-                        Dict(
-                            {
-                                "potion": Discrete(constants.NUM_POTIONS),
-                                "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
-                            }
-                        )
-                    ]
-                    * constants.SHOP_POTION_COUNT
+                    [types.ShopPotion.space()] * shop_consts.SHOP_POTION_COUNT
                 ),
                 "purge": Dict(
                     {
                         "available": Discrete(2),
-                        "price": MultiBinary(constants.SHOP_LOG_MAX_PRICE),
+                        "price": MultiBinary(shop_consts.SHOP_LOG_MAX_PRICE),
                     }
                 ),
             }
@@ -78,26 +62,26 @@ class ShopObs(PydanticComponent):
     def serialize(self) -> dict:
         serialized_cards = [
             types.ShopCard.serialize_empty()
-        ] * constants.SHOP_CARD_COUNT
+        ] * shop_consts.SHOP_CARD_COUNT
         for i, card in enumerate(self.cards):
             serialized_cards[i] = card.serialize()
 
         serialized_relics = [
             types.ShopRelic.serialize_empty()
-        ] * constants.SHOP_RELIC_COUNT
+        ] * shop_consts.SHOP_RELIC_COUNT
         for i, relic in enumerate(self.relics):
             serialized_relics[i] = relic.serialize()
 
         serialized_potions = [
             types.ShopPotion.serialize_empty()
-        ] * constants.SHOP_POTION_COUNT
+        ] * shop_consts.SHOP_POTION_COUNT
         for i, potion in enumerate(self.potions):
             serialized_potions[i] = potion.serialize()
 
         serialized_purge = {
             "available": int(self.purge_available),
             "price": utils.to_binary_array(
-                self.purge_cost, constants.SHOP_LOG_MAX_PRICE
+                self.purge_cost, shop_consts.SHOP_LOG_MAX_PRICE
             ),
         }
 

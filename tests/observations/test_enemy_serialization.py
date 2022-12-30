@@ -1,6 +1,9 @@
 import time
 
-from gym_sts.spaces import actions, constants
+import numpy as np
+
+from gym_sts.spaces import actions
+from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import utils
 
 
@@ -17,7 +20,7 @@ def test_enemy_attack_serialization(env):
     assert len(enemies) > 0
     hexaghost = enemies[0]
     expected_damage = utils.to_binary_array(0, constants.LOG_MAX_ATTACK)
-    assert hexaghost["attack"]["damage"] == expected_damage
+    assert np.array_equal(hexaghost["attack"]["damage"], expected_damage)
 
     # Next, demonstrate that damage and number of hits are correct
     # Hexaghost's attack on turn 2 is ((player HP / 12) + 1) * 6
@@ -32,8 +35,8 @@ def test_enemy_attack_serialization(env):
     hexaghost = enemies[0]
     expected_damage = utils.to_binary_array(1, constants.LOG_MAX_ATTACK)
     expected_times = utils.to_binary_array(6, constants.LOG_MAX_ATTACK_TIMES)
-    assert hexaghost["attack"]["damage"] == expected_damage
-    assert hexaghost["attack"]["times"] == expected_times
+    assert np.array_equal(hexaghost["attack"]["damage"], expected_damage)
+    assert np.array_equal(hexaghost["attack"]["times"], expected_times)
 
     # Next, demonstrate that damage may be adjusted from base values
     env.communicator.basemod("fight Gremlin_Nob")
@@ -62,7 +65,7 @@ def test_enemy_attack_serialization(env):
     gremlin_nob = enemies[0]
     new_damage = gremlin_nob["attack"]["damage"]
     expected_damage = utils.to_binary_array(damage + 2, constants.LOG_MAX_ATTACK)
-    assert new_damage == expected_damage
+    assert np.array_equal(new_damage, expected_damage)
 
     # Runic Dome doesn't cause an error
     env.communicator.basemod("relic add Runic_Dome")

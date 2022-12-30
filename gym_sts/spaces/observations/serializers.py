@@ -10,7 +10,7 @@ def serialize_cards(cards: list[types.Card]) -> npt.NDArray[np.uint]:
     # TODO handle Searing Blow, which can be upgraded unlimited times
     serialized = [0] * card_consts.NUM_CARDS_WITH_UPGRADES
     for card in cards:
-        card_idx = card.serialize_discrete()
+        card_idx = card.serialize(discrete=True)
 
         if serialized[card_idx] < card_consts.MAX_COPIES_OF_CARD:
             serialized[card_idx] += 1

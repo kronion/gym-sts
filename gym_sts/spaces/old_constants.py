@@ -1,6 +1,7 @@
 import math
 from enum import Enum
 
+
 NUM_FLOORS = 55
 LOG_NUM_FLOORS = math.ceil(math.log(NUM_FLOORS, 2))
 
@@ -12,200 +13,6 @@ LOG_MAX_ATTACK_TIMES = 5
 LOG_MAX_BLOCK = 10
 LOG_MAX_EFFECT = 10
 LOG_MAX_TURN = 8
-
-ALL_RELICS = [
-    "NONE",  # Indicates the absence of a relic
-    "CaptainsWheel",
-    "SsserpentHead",
-    "Orrery",
-    "Nloth's Gift",
-    "Mark of the Bloom",
-    "Snecko Eye",
-    "Brimstone",
-    "Astrolabe",
-    "Peace Pipe",
-    "Thread and Needle",
-    "Bloody Idol",
-    "Tiny Chest",
-    "Incense Burner",
-    "Self Forming Clay",
-    "Ring of the Snake",
-    "Red Circlet",
-    "ClockworkSouvenir",
-    "Bottled Flame",
-    "Burning Blood",
-    "InkBottle",
-    "Ninja Scroll",
-    "War Paint",
-    "Pandora's Box",
-    "Red Skull",
-    "Bag of Preparation",
-    "Ice Cream",
-    "PrismaticShard",
-    "Sling",
-    "Gremlin Horn",
-    "Inserter",
-    "Torii",
-    "Sozu",
-    "Toolbox",
-    "Boot",
-    "Vajra",
-    "White Beast Statue",
-    "Girya",
-    "TwistedFunnel",
-    "Singing Bowl",
-    "Juzu Bracelet",
-    "Medical Kit",
-    "Eternal Feather",
-    "Pen Nib",
-    "GremlinMask",
-    "Mango",
-    "Nilry's Codex",
-    "Anchor",
-    "Tiny House",
-    "Nunchaku",
-    "GoldenEye",
-    "Unceasing Top",
-    "Black Blood",
-    "Frozen Eye",
-    "Happy Flower",
-    "TeardropLocket",
-    "Art of War",
-    "Mercury Hourglass",
-    "Coffee Dripper",
-    "Calipers",
-    "Frozen Egg 2",
-    "Sundial",
-    "Bird Faced Urn",
-    "CeramicFish",
-    "Damaru",
-    "StrikeDummy",
-    "PureWater",
-    "Turnip",
-    "CultistMask",
-    "Snake Skull",
-    "Pocketwatch",
-    "Blue Candle",
-    "Old Coin",
-    "Runic Pyramid",
-    "Spirit Poop",
-    "VioletLotus",
-    "Champion Belt",
-    "Omamori",
-    "Philosopher's Stone",
-    "Runic Capacitor",
-    "Yang",
-    "Pear",
-    "Mark of Pain",
-    "Test 4",
-    "Bag of Marbles",
-    "Orichalcum",
-    "Du-Vu Doll",
-    "Ornamental Fan",
-    "Tingsha",
-    "Charon's Ashes",
-    "SacredBark",
-    "Kunai",
-    "HoveringKite",
-    "Empty Cage",
-    "HornCleat",
-    "Discerning Monocle",
-    "Darkstone Periapt",
-    "Paper Frog",
-    "Cracked Core",
-    "Symbiotic Virus",
-    "HandDrill",
-    "Test 3",
-    "Meat on the Bone",
-    "Shovel",
-    "DataDisk",
-    "Oddly Smooth Stone",
-    "Ancient Tea Set",
-    "Bronze Scales",
-    "Nuclear Battery",
-    "TheAbacus",
-    "NeowsBlessing",
-    "Whetstone",
-    "Membership Card",
-    "HolyWater",
-    "Letter Opener",
-    "Dead Branch",
-    "Tough Bandages",
-    "Blood Vial",
-    "SlaversCollar",
-    "Ginger",
-    "WarpedTongs",
-    "Shuriken",
-    "Odd Mushroom",
-    "Bottled Lightning",
-    "The Specimen",
-    "Lee's Waffle",
-    "Red Mask",
-    "Potion Belt",
-    "Regal Pillow",
-    "Magic Flower",
-    "Test 1",
-    "Lizard Tail",
-    "Golden Idol",
-    "Question Card",
-    "Enchiridion",
-    "Velvet Choker",
-    "Calling Bell",
-    "Paper Crane",
-    "Centennial Puzzle",
-    "MawBank",
-    "PreservedInsect",
-    "The Courier",
-    "Melange",
-    "Prayer Wheel",
-    "Smiling Mask",
-    "Toxic Egg 2",
-    "OrangePellets",
-    "Test 6",
-    "TungstenRod",
-    "Pantograph",
-    "Circlet",
-    "Black Star",
-    "Mummified Hand",
-    "Ectoplasm",
-    "FaceOfCleric",
-    "Gambling Chip",
-    "Matryoshka",
-    "FrozenCore",
-    "Bottled Tornado",
-    "Cables",
-    "DollysMirror",
-    "Busted Crown",
-    "MutagenicStrength",
-    "Test 5",
-    "NlothsMask",
-    "Runic Dome",
-    "Toy Ornithopter",
-    "MealTicket",
-    "Lantern",
-    "Fusion Hammer",
-    "WingedGreaves",
-    "Emotion Chip",
-    "Cursed Key",
-    "WristBlade",
-    "Strawberry",
-    "FossilizedHelix",
-    "Dream Catcher",
-    "StoneCalendar",
-    "Necronomicon",
-    "Akabeko",
-    "Ring of the Serpent",
-    "Runic Cube",
-    "CloakClasp",
-    "Yin",
-    "Dark Core",
-    "Derp Rock",
-    "Dodecahedron",
-    "Chemical X",
-    "Cauldron",
-    "Strange Spoon",
-    "Molten Egg 2",
-]
 
 ALL_MONSTER_TYPES = [
     "NONE",
@@ -626,16 +433,6 @@ NORMAL_BOSSES = [
 ]
 NUM_NORMAL_BOSSES = len(NORMAL_BOSSES)
 
-ALL_REWARD_TYPES = [
-    "NONE",  # An empty reward slot
-    "GOLD",
-    "POTION",
-    "RELIC",
-    "CARD",
-    "KEY",
-]
-NUM_REWARD_TYPES = len(ALL_REWARD_TYPES)
-
 ALL_KEYS = [
     "EMERALD",
     "RUBY",
@@ -645,9 +442,6 @@ NUM_KEYS = len(ALL_KEYS)
 
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 16
-
-# I count 179 relics on the STS wiki, including the Circlet
-NUM_RELICS = len(ALL_RELICS)
 
 NUM_ENEMIES = 6
 
@@ -666,20 +460,6 @@ SHOP_CARD_COUNT = 7
 SHOP_RELIC_COUNT = 3
 SHOP_POTION_COUNT = 3
 SHOP_LOG_MAX_PRICE = 10
-
-REWARD_CARD_COUNT = 4  # Default of 3, +1 for Question Card
-
-# Boss gold reward max * golden idol bonus * buffer in case I'm wrong
-_COMBAT_REWARD_MAX_GOLD = int(105 * 1.25 * 1.25)
-_COMBAT_REWARD_MAX_POTION = NUM_POTIONS
-_COMBAT_REWARD_MAX_RELIC = NUM_RELICS
-_COMBAT_REWARD_MAX_ID = max(
-    _COMBAT_REWARD_MAX_GOLD, _COMBAT_REWARD_MAX_POTION, _COMBAT_REWARD_MAX_RELIC
-)
-COMBAT_REWARD_LOG_MAX_ID = math.ceil(math.log(_COMBAT_REWARD_MAX_ID, 2))
-
-# (Card + gold + potion + 2 relics (black star) + key) * buffer in case I'm wrong
-MAX_NUM_REWARDS = int((1 + 1 + 1 + 2 + 1) * 1.25)
 
 
 class ScreenType(str, Enum):
