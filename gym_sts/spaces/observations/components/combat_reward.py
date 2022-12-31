@@ -31,7 +31,7 @@ class CombatRewardObs(ObsComponent):
             ]
         elif screen_type == "BOSS_REWARD":
             self.rewards = [
-                types.RelicReward(value=types.Relic(**relic))
+                types.RelicReward(value=types.RelicBase(**relic))
                 for relic in screen_state["relics"]
             ]
 
@@ -56,7 +56,7 @@ class CombatRewardObs(ObsComponent):
             potion = types.PotionBase(**reward["potion"])
             return types.PotionReward(value=potion)
         elif reward_type == "RELIC":
-            relic = types.Relic(**reward["relic"])
+            relic = types.RelicBase(**reward["relic"])
             return types.RelicReward(value=relic)
         elif reward_type == "CARD":
             return types.CardReward()

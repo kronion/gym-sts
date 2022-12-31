@@ -7,6 +7,9 @@ from pydantic import BaseModel
 
 import gym_sts.spaces.constants.cards as card_consts
 import gym_sts.spaces.constants.shop as shop_consts
+from gym_sts.spaces.constants.cards import CardCatalog
+from gym_sts.spaces.constants.potions import PotionCatalog
+from gym_sts.spaces.constants.relics import RelicCatalog
 from gym_sts.spaces.observations import types, utils
 
 from .base import PydanticComponent
@@ -106,17 +109,20 @@ class ShopObs(PydanticComponent):
         cards = []
         for serialized_card in data.cards:
             shop_card = types.ShopCard.deserialize(serialized_card)
-            cards.append(shop_card)
+            if shop_card.id != CardCatalog.NONE.id:
+                cards.append(shop_card)
 
         relics = []
         for serialized_relic in data.relics:
             shop_relic = types.ShopRelic.deserialize(serialized_relic)
-            relics.append(shop_relic)
+            if shop_relic.id != RelicCatalog.NONE.id:
+                relics.append(shop_relic)
 
         potions = []
         for serialized_potion in data.potions:
             shop_potion = types.ShopPotion.deserialize(serialized_potion)
-            potions.append(shop_potion)
+            if shop_potion.id != PotionCatalog.NONE.id:
+                potions.append(shop_potion)
 
         purge_available = bool(data.purge.available)
         purge_cost = utils.from_binary_array(data.purge.price)
