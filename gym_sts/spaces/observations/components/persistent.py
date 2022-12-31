@@ -105,7 +105,12 @@ class PersistentStateObs(PydanticComponent):
     screen_type: constants.ScreenType = constants.ScreenType.EMPTY
 
     @validator("deck")
-    def ensure_sorted(cls, v: list[types.Card]) -> list[types.Card]:
+    def ensure_deck_sorted(cls, v: list[types.Card]) -> list[types.Card]:
+        v.sort()
+        return v
+
+    @validator("relics")
+    def ensure_relics_sorted(cls, v: list[types.Relic]) -> list[types.Relic]:
         v.sort()
         return v
 
@@ -239,7 +244,8 @@ class PersistentStateObs(PydanticComponent):
 
         keys = types.Keys.deserialize(data.keys)
         act_map, act_boss = deserialize_map(data.act_map)
-        screen_type = list(constants.ScreenType.__members__)[data.screen_type]
+        screen_type_str = list(constants.ScreenType.__members__)[data.screen_type]
+        screen_type = constants.ScreenType(screen_type_str)
 
         return cls(
             floor=floor,

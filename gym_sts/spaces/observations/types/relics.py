@@ -43,6 +43,12 @@ class RelicBase(BaseModel):
 
         return cls(id=relic_id, name=relic_meta.name)
 
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, RelicBase):
+            return NotImplemented
+
+        return self.id < other.id
+
 
 class Relic(RelicBase):
     counter: int = 0
