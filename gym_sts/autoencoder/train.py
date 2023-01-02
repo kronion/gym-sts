@@ -15,6 +15,8 @@ DATA = flags.DEFINE_string(
   'data', 'data/states.pkl', 'path to data')
 
 LR = flags.DEFINE_float('lr', 1e-3, 'learning rate')
+BATCH_SIZE = flags.DEFINE_integer('batch_size', 100, 'batch size')
+LOSS = flags.DEFINE_enum('loss', 'ce', ['ce', 'mse'], 'type of loss')
 
 def one_hot(x, n):
   return nn.functional.one_hot(x.to(torch.int64), n).to(torch.float32)
@@ -61,7 +63,7 @@ def to_tensor(x: np.ndarray):
     x = x.astype(np.int16)
   return torch.from_numpy(x)
 
-def struct_loss(space, x, y):
+def struct_loss(space: spaces.Space, x, y):
   if isinstance(space, spaces.Discrete):
     return ce_loss(x, y.to(torch.int64))
 
@@ -128,7 +130,9 @@ def main(_):
   # prepare data
   flat_train_data = tree.flatten(train_tensor)
   train_dataset = torch.utils.data.TensorDataset(*flat_train_data)
-  data_loader = torch.utils.data.DataLoader(train_dataset, batch_size=100, shuffle=True, drop_last=True)
+  data_loader = torch.utils.data.DataLoader(
+      train_dataset, batch_size=BATCH_SIZE.value,
+      shuffle=True, drop_last=True)
   assert len(data_loader)
   print('num batches', len(data_loader))
 
@@ -137,7 +141,7 @@ def main(_):
 
   optimizer = torch.optim.Adam(auto_encoder.parameters(), lr=LR.value)
   scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer, mode='min', factor=0.2, patience=5, min_lr=5e-7)
+    optimizer, mode='min', factor=0.2, patience=5, min_lr=5e-7, verbose=True)
 
   training_losses = []
   val_losses = []
@@ -145,12 +149,15 @@ def main(_):
   def get_loss(batch):
     batch = tree.unflatten_as(obs_space, batch)
     # x = list(map(encode, flat_spaces, batch))
-    x = encode(base.OBSERVATION_SPACE, batch)
-    x = auto_encoder.forward(x)
-    losses = struct_loss(base.OBSERVATION_SPACE, x, batch)
-    losses = tree.flatten(losses)
-    losses = torch.stack(losses, 1)
-    losses = torch.sum(losses, 1)
+    flat_input = encode(base.OBSERVATION_SPACE, batch)
+    flat_output = auto_encoder.forward(flat_input)
+    if LOSS.value == 'ce':
+      losses = struct_loss(base.OBSERVATION_SPACE, flat_output, batch)
+      losses = tree.flatten(losses)  # C * [B]
+      losses = torch.stack(losses, 1)  # [B, C]
+    elif LOSS.value == 'mse':
+      losses = torch.square(flat_input - flat_output)  # [B, D]
+    losses = torch.sum(losses, 1)  # [B]
     return torch.mean(losses, 0)
 
   def train():
