@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import typing as tp
 
 from absl import app
 from absl import flags
@@ -91,6 +92,40 @@ def struct_loss(space: spaces.Space, x, y):
 
   raise NotImplementedError(type(space))
 
+def discrete_accuracy(x, y) -> torch.Tensor:
+  return torch.eq(torch.argmax(x, dim=-1), y).to(torch.float32)
+
+def accuracy(space: spaces.Space, x: torch.Tensor, y: torch.Tensor):
+  if isinstance(space, spaces.Discrete):
+    return discrete_accuracy(x, y)
+
+  if isinstance(space, spaces.MultiBinary):
+    assert x.shape == y.shape
+    prediction = torch.greater(x, 0)
+    correct = torch.eq(prediction, y).to(torch.float32)
+    return torch.mean(correct, dim=-1)
+
+  if isinstance(space, spaces.MultiDiscrete):
+    assert y.shape[-1] == len(space.nvec)
+    losses = []
+    logits = torch.split(x, tuple(space.nvec), dim=-1)
+    for x_, y_ in zip(logits, torch.unbind(y, -1)):
+      losses.append(discrete_accuracy(x_, y_))
+    loss = torch.stack(losses, dim=-1)
+    return torch.mean(loss, dim=-1)
+
+  if isinstance(space, (spaces.Dict, spaces.Tuple)):
+    space = space_as_nest(space)
+    flat_spaces = tree.flatten(space)
+    space_sizes = tuple(map(space_size, flat_spaces))
+    assert sum(space_sizes) == x.shape[-1]
+    xs = torch.split(x, space_sizes, dim=-1)
+    xs_tree = tree.unflatten_as(y, xs)
+    return tree.map_structure(accuracy, space, xs_tree, y, check_types=False)
+
+  raise NotImplementedError(type(space))
+
+
 def make_auto_encoder(input_size: int, depth: int, width: int):
   layers = [
       nn.Linear(input_size, width),
@@ -146,7 +181,7 @@ def main(_):
   training_losses = []
   val_losses = []
 
-  def get_loss(batch):
+  def get_loss(batch: tp.Sequence[torch.Tensor]):
     batch = tree.unflatten_as(obs_space, batch)
     # x = list(map(encode, flat_spaces, batch))
     flat_input = encode(base.OBSERVATION_SPACE, batch)
@@ -158,19 +193,38 @@ def main(_):
     elif LOSS.value == 'mse':
       losses = torch.square(flat_input - flat_output)  # [B, D]
     losses = torch.sum(losses, 1)  # [B]
-    return torch.mean(losses, 0)
+    loss = torch.mean(losses, 0)
+
+    top1 = accuracy(base.OBSERVATION_SPACE, flat_output, batch)
+    top1 = torch.stack(tree.flatten(top1), 1)  # [B, C]
+    top1 = torch.mean(top1).detach()
+
+    return dict(
+        loss=loss,
+        top1=top1,
+    )
+
+  def print_results(results: dict, prefix: str = ''):
+    loss = results['loss'].double()
+    top1 = results['top1'].double()
+    print(f"{prefix} loss={loss:.1f} top1={top1:.5f}", end='\n')
 
   def train():
       total_batches = len(data_loader)
       for batch_num, batch in enumerate(data_loader):
-          # loss = LOSS_FN(batch, auto_encoder.forward(batch))
-          loss = get_loss(batch)
+          results = get_loss(batch)
+          loss: torch.Tensor = results['loss']
           loss.backward()
-          print(f"Batch: {batch_num+1}/{total_batches} loss: {loss.double()}", end="\n")
           training_losses.append(float(loss))
           optimizer.step()
-      val_loss = get_loss(tree.flatten(valid_tensor))
-      print(f"\nValidation loss: {val_loss}")
+
+          print_results(
+            results=results,
+            prefix=f"Batch: {batch_num+1}/{total_batches}")
+
+      val_results = get_loss(tree.flatten(valid_tensor))
+      val_loss = val_results['loss']
+      print_results(val_results, 'Validation:')
       val_losses.append(float(val_loss))
       scheduler.step(val_loss)
 
