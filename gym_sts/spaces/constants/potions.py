@@ -255,3 +255,5 @@ PotionCatalog = _PotionCatalog()
 
 NUM_POTIONS = len(PotionCatalog)
 LOG_NUM_POTIONS = math.ceil(math.log(NUM_POTIONS, 2))
+
+NUM_POTION_SLOTS = 5

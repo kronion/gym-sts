@@ -3,92 +3,16 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
-from pydantic import BaseModel, Field, validator
+from gym.spaces import Dict, Discrete, MultiBinary, Tuple
+from pydantic import BaseModel, Field, root_validator, validator
 
+import gym_sts.spaces.constants.potions as potion_consts
 import gym_sts.spaces.constants.relics as relic_consts
 from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.constants.cards import CardCatalog, CardMetadata
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import PydanticComponent
-
-
-# from .map import MapObs
-
-
-class SerializedMap(BaseModel):
-    nodes: types.BinaryArray
-    edges: types.BinaryArray
-    boss: int
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-def serialize_map(nodes: list[types.Node], boss: str) -> dict:
-    empty_node = constants.ALL_MAP_LOCATIONS.index("NONE")
-    _nodes = np.full([constants.NUM_MAP_NODES], empty_node, dtype=np.uint8)
-    edges = np.zeros([constants.NUM_MAP_EDGES], dtype=bool)
-
-    for node in nodes:
-        x, y = node.x, node.y
-        node_index = constants.NUM_MAP_NODES_PER_ROW * y + x
-        symbol = node.symbol
-
-        if symbol == "E":
-            # Depends on json field added in our CommunicationMod fork
-            if isinstance(node, types.EliteNode) and node.is_burning:
-                symbol = "B"
-
-        node_type = constants.ALL_MAP_LOCATIONS.index(symbol)
-        _nodes[node_index] = node_type
-
-        if y < constants.NUM_MAP_ROWS - 1:
-            edge_index = node_index * constants.NUM_MAP_EDGES_PER_NODE
-
-            child_x_coords = [child.x for child in node.children]
-
-            for coord in [x - 1, x, x + 1]:
-                if coord in child_x_coords:
-                    edges[edge_index] = True
-                edge_index += 1
-
-    _boss = constants.NORMAL_BOSSES.index(boss)
-    return {
-        "nodes": _nodes,
-        "edges": edges,
-        "boss": _boss,
-    }
-
-
-def deserialize_map(data: SerializedMap):
-    nodes = []
-    for pos, node in enumerate(data.nodes):
-        node_type = constants.ALL_MAP_LOCATIONS[node]
-
-        if node_type == "NONE":
-            continue
-
-        y, x = divmod(pos, constants.NUM_MAP_NODES_PER_ROW)
-        children = []
-
-        if y < constants.NUM_MAP_ROWS - 1:
-            edge_index = (
-                constants.NUM_MAP_NODES_PER_ROW * y + x
-            ) * constants.NUM_MAP_EDGES_PER_NODE
-
-            for i, coord in enumerate([x - 1, x, x + 1]):
-                if data.edges[edge_index + i]:
-                    children.append({"x": coord, "y": y + 1})
-        else:
-            children.append({"x": 3, "y": y + 2})
-
-        nodes.append({"symbol": node_type, "children": children, "x": x, "y": y})
-
-    boss = constants.NORMAL_BOSSES[data.boss]
-
-    return nodes, boss
 
 
 class PersistentStateObs(PydanticComponent):
@@ -100,9 +24,26 @@ class PersistentStateObs(PydanticComponent):
     relics: list[types.Relic] = []
     deck: list[types.Card] = []
     keys: types.Keys = types.Keys()
-    act_map: list[types.Node] = Field([], alias="map")
-    act_boss: str = "NONE"  # TODO use enum
+    map: types.Map = types.Map()
     screen_type: constants.ScreenType = constants.ScreenType.EMPTY
+
+    @root_validator(pre=True)
+    def combine_map_inputs(cls, values):
+        """
+        CommunicationMod provides the map nodes and act boss separately, but we'd
+        rather combine them into one Pydantic model. To do this, we restructure the
+        input so our Pydantic model will deserialize it properly.
+        """
+
+        map = values["map"]
+        if not isinstance(map, types.Map):
+            restructured_map = {
+                "nodes": map,
+                "boss": values["act_boss"],
+            }
+            values["map"] = restructured_map
+
+        return values
 
     @validator("deck")
     def ensure_deck_sorted(cls, v: list[types.Card]) -> list[types.Card]:
@@ -121,22 +62,15 @@ class PersistentStateObs(PydanticComponent):
                 "floor": MultiBinary(constants.LOG_NUM_FLOORS),
                 "health": spaces.generate_health_space(),
                 "gold": MultiBinary(constants.LOG_MAX_GOLD),
-                "potions": Tuple([types.Potion.space()] * constants.NUM_POTION_SLOTS),
-                # TODO @kronion add counters and usages (e.g. lizard tail) to relics
+                "potions": Tuple(
+                    [types.Potion.space()] * potion_consts.NUM_POTION_SLOTS
+                ),
                 "relics": MultiBinary(
                     [relic_consts.NUM_RELICS, relic_consts.LOG_MAX_COUNTER]
                 ),
                 "deck": spaces.generate_card_space(),
                 "keys": MultiBinary(constants.NUM_KEYS),
-                "map": Dict(
-                    {
-                        "nodes": MultiDiscrete(
-                            [constants.NUM_MAP_LOCATIONS] * constants.NUM_MAP_NODES
-                        ),
-                        "edges": MultiBinary(constants.NUM_MAP_EDGES),
-                        "boss": Discrete(constants.NUM_NORMAL_BOSSES),
-                    }
-                ),
+                "map": types.Map.space(),
                 "screen_type": Discrete(len(constants.ScreenType.__members__)),
             }
         )
@@ -146,7 +80,7 @@ class PersistentStateObs(PydanticComponent):
         health = types.Health(hp=self.hp, max_hp=self.max_hp).serialize()
         gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
 
-        potions = [types.Potion.serialize_empty()] * constants.NUM_POTION_SLOTS
+        potions = [types.Potion.serialize_empty()] * potion_consts.NUM_POTION_SLOTS
 
         for i, potion in enumerate(self.potions):
             potions[i] = potion.serialize()
@@ -162,6 +96,7 @@ class PersistentStateObs(PydanticComponent):
         deck = serializers.serialize_cards(self.deck)
 
         keys = self.keys.serialize()
+        map = self.map.serialize()
 
         response = {
             "floor": floor,
@@ -171,7 +106,7 @@ class PersistentStateObs(PydanticComponent):
             "relics": relics,
             "deck": deck,
             "keys": keys,
-            "map": serialize_map(self.act_map, self.act_boss),
+            "map": map,
             "screen_type": list(constants.ScreenType.__members__).index(
                 self.screen_type.value
             ),
@@ -187,7 +122,7 @@ class PersistentStateObs(PydanticComponent):
         relics: types.BinaryArray
         deck: types.BinaryArray
         keys: types.BinaryArray
-        act_map: SerializedMap = Field(..., alias="map")
+        map: types.Map.SerializedState
         screen_type: int
 
         class Config:
@@ -243,7 +178,7 @@ class PersistentStateObs(PydanticComponent):
                     deck.append(card)
 
         keys = types.Keys.deserialize(data.keys)
-        act_map, act_boss = deserialize_map(data.act_map)
+        map = types.Map.deserialize(data.map)
         screen_type_str = list(constants.ScreenType.__members__)[data.screen_type]
         screen_type = constants.ScreenType(screen_type_str)
 
@@ -256,7 +191,6 @@ class PersistentStateObs(PydanticComponent):
             relics=relics,
             deck=deck,
             keys=keys,
-            map=act_map,
-            act_boss=act_boss,
+            map=map,
             screen_type=screen_type,
         )

@@ -4,7 +4,7 @@ from typing import Literal, Union
 
 import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary
-from pydantic import BaseModel, Field, NonNegativeInt
+from pydantic import BaseModel, Field, NonNegativeInt, validator
 
 import gym_sts.spaces.constants.cards as card_consts
 from gym_sts.spaces.constants.cards import CardCatalog
@@ -21,6 +21,14 @@ class Card(BaseModel):
     ethereal: bool
     upgrades: NonNegativeInt
     has_target: bool
+
+    @validator("cost", pre=True)
+    def decode_special_costs(cls, v: int) -> Union[NonNegativeInt, Literal["U", "X"]]:
+        if v == -1:
+            return "X"
+        elif v == -2:
+            return "U"
+        return v
 
     @classmethod
     def _serialize(
