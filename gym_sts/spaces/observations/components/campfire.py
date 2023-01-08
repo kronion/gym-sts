@@ -2,96 +2,72 @@ from __future__ import annotations
 
 from typing import Union
 
-from gym.spaces import Dict, Discrete, Space
-from pydantic import BaseModel
+from gym.spaces import Dict, Discrete, Space, Tuple
+from pydantic import BaseModel, Field
 
-from .base import ObsComponent
+import gym_sts.spaces.constants.campfire as campfire_consts
+from gym_sts.spaces.observations import types
+
+from .base import PydanticComponent
 
 
-class CampfireObs(ObsComponent):
-    def __init__(self, state: dict):
-        # Sane defaults
-        self.rest = False
-        self.smith = False
-        self.lift = False
-        self.toke = False
-        self.dig = False
-        self.recall = False
-
-        if state.get("has_rested"):
-            return
-
-        rest_options = state.get("rest_options", [])
-        possible_options = ["rest", "smith", "lift", "toke", "dig", "recall"]
-
-        for option in possible_options:
-            if option in rest_options:
-                setattr(self, option, True)
+class CampfireObs(PydanticComponent):
+    options: list[types.CampfireChoice] = Field([], alias="rest_options")
+    has_rested: bool = False
 
     @staticmethod
     def space() -> Space:
         return Dict(
             {
-                "rest": Discrete(2),
-                "smith": Discrete(2),
-                "lift": Discrete(2),
-                "toke": Discrete(2),
-                "dig": Discrete(2),
-                "recall": Discrete(2),
+                "options": Tuple(
+                    [types.CampfireChoice.space()] * campfire_consts.MAX_NUM_OPTIONS
+                ),
+                "has_rested": Discrete(2),
             }
         )
 
     def serialize(self) -> dict:
+        options = [
+            types.CampfireChoice.serialize_empty()
+        ] * campfire_consts.MAX_NUM_OPTIONS
+        for i, option in enumerate(self.options):
+            options[i] = option.serialize()
+
         return {
-            "rest": int(self.rest),
-            "smith": int(self.smith),
-            "lift": int(self.lift),
-            "toke": int(self.toke),
-            "dig": int(self.dig),
-            "recall": int(self.recall),
+            "options": options,
+            "has_rested": int(self.has_rested),
         }
 
     class SerializedState(BaseModel):
-        rest: int
-        smith: int
-        lift: int
-        toke: int
-        dig: int
-        recall: int
+        options: list[types.BinaryArray]
+        has_rested: int
+
+        class Config:
+            arbitrary_types_allowed = True
 
     @classmethod
     def deserialize(cls, data: Union[dict, SerializedState]) -> CampfireObs:
         if not isinstance(data, cls.SerializedState):
             data = cls.SerializedState(**data)
 
-        # Instantiate with empty data and update attributes individually,
-        # rather than trying to recreate CommunicationMod's weird data shape.
-        instance = cls({})
+        options = []
+        for o in data.options:
+            option = types.CampfireChoice.deserialize(o)
+            if option != types.CampfireChoice.EMPTY:
+                options.append(option)
 
-        instance.rest = bool(data.rest)
-        instance.smith = bool(data.smith)
-        instance.lift = bool(data.lift)
-        instance.toke = bool(data.toke)
-        instance.dig = bool(data.dig)
-        instance.recall = bool(data.recall)
+        has_rested = bool(data.has_rested)
 
-        return instance
+        return cls(rest_options=options, has_rested=has_rested)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, CampfireObs):
             return False
 
-        attrs = [
-            "rest",
-            "smith",
-            "lift",
-            "toke",
-            "dig",
-            "recall",
-        ]
+        if self.options != other.options:
+            return False
 
-        for attr in attrs:
-            if getattr(self, attr) != getattr(other, attr):
-                return False
+        if self.has_rested != other.has_rested:
+            return False
 
         return True

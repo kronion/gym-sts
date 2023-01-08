@@ -26,8 +26,6 @@ OBSERVATION_SPACE = spaces.Dict(
         "card_reward_state": components.CardRewardObs.space(),
         "combat_reward_state": components.CombatRewardObs.space(),
         "event_state": components.EventStateObs.space(),
-        # TODO: Possibly have Discrete space telling AI what screen it's on
-        # (e.g. screen type)
         "valid_action_mask": spaces.MultiBinary(len(actions.ACTIONS)),
     }
 )
@@ -35,9 +33,12 @@ OBSERVATION_SPACE = spaces.Dict(
 
 class Observation:
     class SerializedState(BaseModel):
+        campfire_state: components.CampfireObs.SerializedState
+        card_reward_state: components.CardRewardObs.SerializedState
+        combat_state: components.CombatObs.SerializedState
+        combat_reward_state: components.CombatRewardObs.SerializedState
         persistent_state: components.PersistentStateObs.SerializedState
         shop_state: components.ShopObs.SerializedState
-        campfire_state: components.CampfireObs.SerializedState
 
     def __init__(self, state: Union[dict, SerializedState]):
         if isinstance(state, dict):
@@ -48,30 +49,38 @@ class Observation:
             self.persistent_state = components.PersistentStateObs(**game_state)
 
             self.combat_state = components.CombatObs(game_state)
+            self.combat_reward_state = components.CombatRewardObs(game_state)
 
             shop_state = screen_state if screen_type == ScreenType.SHOP_SCREEN else {}
             self.shop_state = components.ShopObs(**shop_state)
 
             campfire_state = screen_state if screen_type == ScreenType.REST else {}
-            self.campfire_state = components.CampfireObs(campfire_state)
+            self.campfire_state = components.CampfireObs(**campfire_state)
 
             card_reward_state = (
                 screen_state if screen_type == ScreenType.CARD_REWARD else {}
             )
             self.card_reward_state = components.CardRewardObs(**card_reward_state)
-            self.combat_reward_state = components.CombatRewardObs(state)
+
             self.event_state = components.EventStateObs(state)
 
             # Keep a reference to the raw CommunicationMod response
             self.state = state
         else:
+            self.campfire_state = components.CampfireObs.deserialize(
+                state.campfire_state
+            )
+            self.card_reward_state = components.CardRewardObs.deserialize(
+                state.card_reward_state
+            )
+            self.combat_state = components.CombatObs.deserialize(state.combat_state)
+            self.combat_reward_state = components.CombatRewardObs.deserialize(
+                state.combat_reward_state
+            )
             self.persistent_state = components.PersistentStateObs.deserialize(
                 state.persistent_state
             )
             self.shop_state = components.ShopObs.deserialize(state.shop_state)
-            self.campfire_state = components.CampfireObs.deserialize(
-                state.campfire_state
-            )
 
             # TODO this doesn't really work because we assume the keys will be present
             # replace with a pydantic model?
@@ -159,7 +168,7 @@ class Observation:
             "valid_action_mask": valid_action_mask,
         }
 
-    # @classmethod
-    # def deserialize(cls, raw_data: dict) -> Observation:
-    #     data = cls.SerializedState(**raw_data)
-    #     return data
+    @classmethod
+    def deserialize(cls, raw_data: dict) -> Observation:
+        data = cls.SerializedState(**raw_data)
+        return cls(data)

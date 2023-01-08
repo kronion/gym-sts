@@ -35,13 +35,16 @@ class PersistentStateObs(PydanticComponent):
         input so our Pydantic model will deserialize it properly.
         """
 
-        map = values["map"]
-        if not isinstance(map, types.Map):
-            restructured_map = {
-                "nodes": map,
-                "boss": values["act_boss"],
-            }
-            values["map"] = restructured_map
+        try:
+            map = values["map"]
+            if not isinstance(map, types.Map):
+                restructured_map = {
+                    "nodes": map,
+                    "boss": values["act_boss"],
+                }
+                values["map"] = restructured_map
+        except KeyError:
+            pass
 
         return values
 

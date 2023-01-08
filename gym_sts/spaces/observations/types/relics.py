@@ -109,7 +109,7 @@ class ShopRelic(RelicBase, ShopMixin):
     def space() -> Dict:
         return Dict(
             {
-                "relic": Discrete(relic_consts.NUM_RELICS),
+                "relic": MultiBinary(relic_consts.LOG_NUM_RELICS),
                 "price": MultiBinary(shop_consts.SHOP_LOG_MAX_PRICE),
             }
         )

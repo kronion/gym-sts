@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Union
 
+from gym.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field
 
 import gym_sts.spaces.constants.rewards as reward_consts
@@ -16,6 +17,16 @@ from .relics import RelicBase
 
 
 class Reward(BaseModel, ABC):
+    @staticmethod
+    def space():
+        return Dict(
+            {
+                "type": Discrete(reward_consts.NUM_REWARD_TYPES),
+                # Could be a gold value, a relic ID, the color of a key, or a potion ID
+                "value": MultiBinary(reward_consts.COMBAT_REWARD_LOG_MAX_ID),
+            }
+        )
+
     @abstractmethod
     def serialize(self) -> dict:
         raise NotImplementedError("Unimplemented")

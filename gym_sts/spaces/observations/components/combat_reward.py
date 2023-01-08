@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from gym.spaces import Dict, Discrete, MultiBinary, Tuple
-from pydantic import BaseModel
+from gym.spaces import Tuple
 
 import gym_sts.spaces.constants.rewards as reward_consts
 from gym_sts.spaces.observations import types
@@ -12,13 +11,9 @@ from .base import ObsComponent
 
 
 class CombatRewardObs(ObsComponent):
-    def __init__(self, state: dict):
+    def __init__(self, game_state: dict):
         # Sane defaults
         self.rewards: list[types.Reward] = []
-
-        game_state = state.get("game_state")
-        if game_state is None:
-            return
 
         screen_type = game_state.get("screen_type")
         if screen_type is None:
@@ -37,14 +32,7 @@ class CombatRewardObs(ObsComponent):
 
     @staticmethod
     def space():
-        combat_reward_item = Dict(
-            {
-                "type": Discrete(reward_consts.NUM_REWARD_TYPES),
-                # Could be a gold value, a relic ID, the color of a key, or a potion ID
-                "value": MultiBinary(reward_consts.COMBAT_REWARD_LOG_MAX_ID),
-            }
-        )
-        return Tuple([combat_reward_item] * reward_consts.MAX_NUM_REWARDS)
+        return Tuple([types.Reward.space()] * reward_consts.MAX_NUM_REWARDS)
 
     @staticmethod
     def _parse_reward(reward: dict):
@@ -73,13 +61,10 @@ class CombatRewardObs(ObsComponent):
             serialized[i] = reward.serialize()
         return serialized
 
-    class SerializedState(BaseModel):
-        pass
+    SerializedState = list[types.Reward.SerializedState]
 
     @classmethod
-    def deserialize(
-        cls, data: Union[list[dict], list[types.RelicReward.SerializedState]]
-    ) -> CombatRewardObs:
+    def deserialize(cls, data: Union[list[dict], SerializedState]) -> CombatRewardObs:
         rewards = []
         for r in data:
             try:

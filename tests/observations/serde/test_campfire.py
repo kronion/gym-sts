@@ -1,6 +1,8 @@
 import time
 
 from gym_sts.envs.base import SlayTheSpireGymEnv
+from gym_sts.spaces.observations.components import CampfireObs
+from gym_sts.spaces.observations.types import CampfireChoice
 
 
 def test_campfire_serde(env: SlayTheSpireGymEnv):
@@ -49,3 +51,35 @@ def test_campfire_serde(env: SlayTheSpireGymEnv):
     de = obs.campfire_state.deserialize(ser)
 
     assert orig_state == de
+
+
+def test_rest_option_order_matters():
+    dig_then_toke = [
+        CampfireChoice.REST,
+        CampfireChoice.SMITH,
+        CampfireChoice.DIG,
+        CampfireChoice.TOKE,
+        CampfireChoice.RECALL,
+    ]
+
+    toke_then_dig = [
+        CampfireChoice.REST,
+        CampfireChoice.SMITH,
+        CampfireChoice.TOKE,
+        CampfireChoice.DIG,
+        CampfireChoice.RECALL,
+    ]
+
+    obs1 = CampfireObs(has_rested=False, rest_options=dig_then_toke)
+    obs2 = CampfireObs(has_rested=False, rest_options=toke_then_dig)
+
+    assert obs1 != obs2
+
+    ser1 = obs1.serialize()
+    ser2 = obs2.serialize()
+    de1 = CampfireObs.deserialize(ser1)
+    de2 = CampfireObs.deserialize(ser2)
+
+    assert obs1 == de1
+    assert obs2 == de2
+    assert de1 != de2
