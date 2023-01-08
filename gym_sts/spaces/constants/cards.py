@@ -2881,9 +2881,22 @@ class _CardCatalog:
                 has_target=False,
             ),
         ),
+        "Steam": CardMetadata(
+            id="Steam",
+            name="Steam Barrier",
+            card_type=CardType.SKILL,
+            unupgraded=CardProperties(
+                default_cost=0,
+                has_target=False,
+            ),
+            upgraded=CardProperties(
+                default_cost=0,
+                has_target=False,
+            ),
+        ),
         "Steam Power": CardMetadata(
             id="Steam Power",
-            name="Steam Barrier",
+            name="Overclock",
             card_type=CardType.SKILL,
             unupgraded=CardProperties(
                 default_cost=0,
@@ -2997,6 +3010,19 @@ class _CardCatalog:
             ),
             upgraded=CardProperties(
                 default_cost=0,
+                has_target=False,
+            ),
+        ),
+        "Undo": CardMetadata(
+            id="Undo",
+            name="Equilibrium",
+            card_type=CardType.SKILL,
+            unupgraded=CardProperties(
+                default_cost=2,
+                has_target=False,
+            ),
+            upgraded=CardProperties(
+                default_cost=2,
                 has_target=False,
             ),
         ),
