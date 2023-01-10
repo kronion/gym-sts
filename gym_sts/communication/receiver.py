@@ -3,6 +3,8 @@ import json
 import os
 import time
 
+from gym_sts import exceptions
+
 
 class Receiver:
     def __init__(self, fn, timeout: float = 50):
@@ -40,7 +42,7 @@ class Receiver:
 
             time.sleep(self.sleep_time)
 
-        raise TimeoutError(
+        raise exceptions.StSTimeoutError(
             f"Waited {self.timeout} seconds for game state to be ready "
             "for command, but it didn't happen."
         )
