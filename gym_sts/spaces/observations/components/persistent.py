@@ -68,8 +68,9 @@ class PersistentStateObs(PydanticComponent):
                 "potions": Tuple(
                     [types.Potion.space()] * potion_consts.NUM_POTION_SLOTS
                 ),
-                "relics": MultiBinary(
-                    [relic_consts.NUM_RELICS, relic_consts.LOG_MAX_COUNTER]
+                "relics": Tuple(
+                    [MultiBinary(relic_consts.LOG_MAX_COUNTER)]
+                    * relic_consts.NUM_RELICS
                 ),
                 "deck": spaces.generate_card_space(),
                 "keys": MultiBinary(constants.NUM_KEYS),
@@ -88,9 +89,9 @@ class PersistentStateObs(PydanticComponent):
         for i, potion in enumerate(self.potions):
             potions[i] = potion.serialize()
 
-        relics = np.zeros(
-            [relic_consts.NUM_RELICS, relic_consts.LOG_MAX_COUNTER], dtype=bool
-        )
+        relics = [
+            np.zeros(relic_consts.LOG_MAX_COUNTER, dtype=bool)
+        ] * relic_consts.NUM_RELICS
 
         for relic in self.relics:
             ser = relic.serialize()
@@ -122,7 +123,7 @@ class PersistentStateObs(PydanticComponent):
         health: types.Health.SerializedState
         gold: types.BinaryArray
         potions: list[types.Potion.SerializedState]
-        relics: types.BinaryArray
+        relics: list[types.BinaryArray]
         deck: types.BinaryArray
         keys: types.BinaryArray
         map: types.Map.SerializedState
@@ -148,8 +149,7 @@ class PersistentStateObs(PydanticComponent):
                 potions.append(potion)
 
         relics = []
-        relic_df = data.relics.reshape((relic_consts.NUM_RELICS, -1))
-        for idx, r in enumerate(relic_df):
+        for idx, r in enumerate(data.relics):
             relic_data = {
                 "id": idx,
                 "counter": r,
