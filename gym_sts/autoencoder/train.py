@@ -1,12 +1,15 @@
 import pickle
+import getpass
 import typing as tp
 
+import fancyflags as ff
 import numpy as np
 import torch
 import torch.nn as nn
 import tree
 from absl import app, flags
 from gym import spaces
+import wandb
 
 from gym_sts.envs import base
 
@@ -15,6 +18,19 @@ DATA = flags.DEFINE_string("data", "data/states.pkl", "path to data")
 LR = flags.DEFINE_float("lr", 1e-3, "learning rate")
 BATCH_SIZE = flags.DEFINE_integer("batch_size", 100, "batch size")
 LOSS = flags.DEFINE_enum("loss", "ce", ["ce", "mse"], "type of loss")
+
+NUM_EPOCHS = flags.DEFINE_integer('num_epochs', 10, 'number of training epochs')
+
+# passed to wandb.init
+WANDB = ff.DEFINE_dict(
+    'wandb',
+    entity=ff.String('sts-ai'),
+    project=ff.String('autoencoder'),
+    mode=ff.Enum('offline', ['online', 'offline', 'disabled']),
+    group=ff.String(getpass.getuser()),  # group by username
+    name=ff.String(None),
+    notes=ff.String(None),
+)
 
 
 def one_hot(x, n):
@@ -160,6 +176,16 @@ def main(_):
     train_size = round(total_size * 0.8)
     print("total states:", total_size)
 
+    wandb.init(
+        config=dict(
+            lr=LR.value,
+            batch_size=BATCH_SIZE.value,
+            loss=LOSS.value,
+            dataset_size=total_size,
+        ),
+        **WANDB.value,
+    )
+
     train_set = tree.map_structure(lambda x: x[:train_size], column_major)
     valid_set = tree.map_structure(lambda x: x[train_size:], column_major)
 
@@ -221,7 +247,9 @@ def main(_):
         top1 = results["top1"].double()
         print(f"{prefix} loss={loss:.1f} top1={top1:.5f}", end="\n")
 
-    def train():
+    train_step = 0
+    for epoch in range(NUM_EPOCHS.value):
+        print(f"Epoch {epoch}")
         total_batches = len(data_loader)
         for batch_num, batch in enumerate(data_loader):
             results = get_loss(batch)
@@ -234,15 +262,27 @@ def main(_):
                 results=results, prefix=f"Batch: {batch_num+1}/{total_batches}"
             )
 
+            to_log = dict(
+                loss=results["loss"].double(),
+                top1=results["top1"].double(),
+                epoch=epoch + batch_num / total_batches,
+            )
+            wandb.log(dict(train=to_log), step=train_step)
+
+            train_step += 1
+
         val_results = get_loss(tree.flatten(valid_tensor))
         val_loss = val_results["loss"]
         print_results(val_results, "Validation:")
         val_losses.append(float(val_loss))
         scheduler.step(val_loss)
 
-    for epoch in range(10):
-        print(f"Epoch {epoch}")
-        train()
+        to_log = dict(
+            loss=val_results["loss"].double(),
+            top1=val_results["top1"].double(),
+            epoch=epoch + 1,
+        )
+        wandb.log(dict(validation=to_log), step=train_step)
 
 
 if __name__ == "__main__":
