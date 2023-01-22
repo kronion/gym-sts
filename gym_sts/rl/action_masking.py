@@ -16,7 +16,7 @@ class MaskedModel(fcnet.FullyConnectedNetwork):
 
         mask = input_dict["obs"]["valid_action_mask"]
         mask = torch.Tensor(mask).to(torch.bool)
-        logits = torch.where(mask, logits, -1e20)
+        logits = torch.where(mask, logits, torch.finfo().min)
 
         return logits, state
 
