@@ -59,15 +59,3 @@ class CampfireObs(PydanticComponent):
         has_rested = bool(data.has_rested)
 
         return cls(rest_options=options, has_rested=has_rested)
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, CampfireObs):
-            return False
-
-        if self.options != other.options:
-            return False
-
-        if self.has_rested != other.has_rested:
-            return False
-
-        return True
