@@ -1,30 +1,17 @@
-from typing import Optional
+from __future__ import annotations
+
+from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+import numpy.typing as npt
+from gym.spaces import Dict, MultiBinary, MultiDiscrete, Tuple
+from pydantic import BaseModel
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants.cards import CardCatalog
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
 from .base import ObsComponent
-
-
-def _generate_enemy_space():
-    return Dict(
-        {
-            "id": Discrete(constants.NUM_MONSTER_TYPES),
-            "intent": Discrete(constants.NUM_INTENTS),
-            "attack": Dict(
-                {
-                    "damage": MultiBinary(constants.LOG_MAX_ATTACK),
-                    "times": MultiBinary(constants.LOG_MAX_ATTACK_TIMES),
-                }
-            ),
-            "block": MultiBinary(constants.LOG_MAX_BLOCK),
-            "effects": spaces.generate_effect_space(),
-            "health": spaces.generate_health_space(),
-        }
-    )
 
 
 class CombatObs(ObsComponent):
@@ -32,132 +19,83 @@ class CombatObs(ObsComponent):
         # Sane defaults
         self.turn = 0
 
-        self.hand = []
-        self.discard = []
-        self.draw = []
-        self.exhaust = []
+        self.hand: list[types.HandCard] = []
+        self.discard: list[types.Card] = []
+        self.draw: list[types.Card] = []
+        self.exhaust: list[types.Card] = []
 
-        self.enemies = []
+        self.enemies: list[types.Enemy] = []
 
         self.energy = 0
         self.block = 0
-        self.effects = []
-        self.orbs = []
+        self.effects: list[types.Effect] = []
+        self.orbs: list[types.Orb] = []
 
         # TODO make selections part of observation space?
         self.hand_selects = []
         self.max_selects = 0
         self.can_pick_zero = False
 
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if "combat_state" in game_state:
-                combat_state = game_state["combat_state"]
+        if "combat_state" in state:
+            combat_state = state["combat_state"]
 
-                self.turn = combat_state["turn"]
+            self.turn = combat_state["turn"]
 
-                self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
-                self.discard = [
-                    types.Card(**card) for card in combat_state["discard_pile"]
-                ]
-                self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
-                self.exhaust = [
-                    types.Card(**card) for card in combat_state["exhaust_pile"]
-                ]
+            self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
+            self.discard = [types.Card(**card) for card in combat_state["discard_pile"]]
+            self.discard.sort()
+            self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
+            self.draw.sort()
+            self.exhaust = [types.Card(**card) for card in combat_state["exhaust_pile"]]
+            self.exhaust.sort()
 
-                self.enemies = combat_state["monsters"]
+            self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
 
-                player_state = combat_state["player"]
-                self.block = player_state["block"]
-                self.energy = player_state["energy"]
-                self.effects = player_state["powers"]
-                self.orbs = player_state["orbs"]
+            player_state = combat_state["player"]
+            self.block = player_state["block"]
+            self.energy = player_state["energy"]
+            self.effects = [types.Effect(**effect) for effect in player_state["powers"]]
+            self.orbs = [types.Orb(**orb) for orb in player_state["orbs"]]
 
-                if game_state["screen_type"] == "HAND_SELECT":
-                    screen_state = game_state["screen_state"]
-                    self.hand_selects = screen_state["selected"]
-                    self.max_selects = screen_state["max_cards"]
-                    self.can_pick_zero = screen_state["can_pick_zero"]
+            if state["screen_type"] == constants.ScreenType.HAND_SELECT:
+                screen_state = state["screen_state"]
+                self.hand_selects = screen_state["selected"]
+                self.max_selects = screen_state["max_cards"]
+                self.can_pick_zero = screen_state["can_pick_zero"]
 
     @staticmethod
-    def space():
+    def space() -> Dict:
         return Dict(
             {
                 "turn": MultiBinary(constants.LOG_MAX_TURN),
-                "hand": MultiDiscrete(
-                    [constants.NUM_CARDS_WITH_UPGRADES] * constants.HAND_SIZE
-                ),
+                "hand": Tuple([types.HandCard.space()] * constants.HAND_SIZE),
                 "energy": MultiBinary(constants.LOG_MAX_ENERGY),
                 "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
                 "block": MultiBinary(constants.LOG_MAX_BLOCK),
                 "effects": spaces.generate_effect_space(),
-                "enemies": Tuple([_generate_enemy_space()] * constants.NUM_ENEMIES),
+                "enemies": Tuple([types.Enemy.space()] * constants.NUM_ENEMIES),
                 "discard": spaces.generate_card_space(),
                 "draw": spaces.generate_card_space(),
                 "exhaust": spaces.generate_card_space(),
             }
         )
 
-    def _serialize_enemy(self, enemy: Optional[dict]) -> dict:
-        if enemy is not None:
-            damage = 0
-            times = 0
-
-            # These may not be present if the player has runic dome
-            if "move_adjusted_damage" in enemy and "move_hits" in enemy:
-                damage = max(enemy["move_adjusted_damage"], 0)
-                times = enemy["move_hits"]
-
-            serialized = {
-                "id": constants.ALL_MONSTER_TYPES.index(enemy["id"]),
-                "intent": constants.ALL_INTENTS.index(enemy["intent"]),
-                "attack": {
-                    "damage": utils.to_binary_array(damage, constants.LOG_MAX_ATTACK),
-                    "times": utils.to_binary_array(
-                        times, constants.LOG_MAX_ATTACK_TIMES
-                    ),
-                },
-                "block": utils.to_binary_array(enemy["block"], constants.LOG_MAX_BLOCK),
-                "effects": serializers.serialize_effects(enemy["powers"]),
-                "health": serializers.serialize_health(
-                    enemy["current_hp"], enemy["max_hp"]
-                ),
-            }
-        else:
-            serialized = {
-                "id": 0,
-                "intent": 0,
-                "attack": {
-                    "damage": utils.to_binary_array(0, constants.LOG_MAX_ATTACK),
-                    "times": utils.to_binary_array(0, constants.LOG_MAX_ATTACK_TIMES),
-                },
-                "block": utils.to_binary_array(0, constants.LOG_MAX_BLOCK),
-                "effects": serializers.serialize_effects([]),
-                "health": serializers.serialize_health(0, 0),
-            }
-
-        return serialized
-
     def serialize(self) -> dict:
         turn = utils.to_binary_array(self.turn, constants.LOG_MAX_TURN)
         energy = utils.to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
         block = utils.to_binary_array(self.block, constants.LOG_MAX_BLOCK)
 
-        hand = [0] * constants.HAND_SIZE
+        hand = [types.HandCard.serialize_empty()] * constants.HAND_SIZE
         for i, card in enumerate(self.hand):
-            card_idx = card.serialize_discrete()
+            card_idx = card.serialize()
             hand[i] = card_idx
 
-        effects = serializers.serialize_effects(self.effects)
+        effects = types.Effect.serialize_all(self.effects)
         orbs = serializers.serialize_orbs(self.orbs)
 
-        enemies = []
-        for i in range(constants.NUM_ENEMIES):
-            enemy = None
-            if i < len(self.enemies):
-                enemy = self.enemies[i]
-
-            enemies.append(self._serialize_enemy(enemy))
+        enemies = [types.Enemy.serialize_empty()] * constants.NUM_ENEMIES
+        for i, enemy in enumerate(self.enemies):
+            enemies[i] = enemy.serialize()
 
         discard = serializers.serialize_cards(self.discard)
         draw = serializers.serialize_cards(self.draw)
@@ -165,7 +103,7 @@ class CombatObs(ObsComponent):
 
         response = {
             "turn": turn,
-            "hand": np.array(hand, dtype=np.uint16),
+            "hand": hand,
             "energy": energy,
             "block": block,
             "effects": effects,
@@ -177,3 +115,102 @@ class CombatObs(ObsComponent):
         }
 
         return response
+
+    class SerializedState(BaseModel):
+        turn: types.BinaryArray
+        hand: list[types.HandCard.SerializedState]
+        energy: types.BinaryArray
+        block: types.BinaryArray
+        effects: list[dict]
+        orbs: npt.NDArray[np.uint]
+        enemies: list[dict]
+        discard: npt.NDArray[np.uint]
+        draw: npt.NDArray[np.uint]
+        exhaust: npt.NDArray[np.uint]
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> CombatObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        # Instantiate with empty data and update attributes individually,
+        # rather than trying to recreate CommunicationMod's weird data shape.
+        instance = cls({})
+
+        instance.turn = utils.from_binary_array(data.turn)
+        instance.energy = utils.from_binary_array(data.energy)
+        instance.block = utils.from_binary_array(data.block)
+
+        instance.effects = []
+        for effect_idx, e in enumerate(data.effects):
+            effect = types.Effect.deserialize(e)
+            if effect.amount != 0:
+                effect.id = constants.ALL_EFFECTS[effect_idx]
+                instance.effects.append(effect)
+
+        instance.orbs = []
+        for o in data.orbs:
+            orb = types.Orb.deserialize(o)
+            if orb.id != "NONE":
+                instance.orbs.append(orb)
+
+        instance.enemies = []
+        for e in data.enemies:
+            enemy = types.Enemy.deserialize(e)
+            if enemy.id != "NONE":
+                instance.enemies.append(enemy)
+
+        instance.hand = []
+        for hc in data.hand:
+            hand_card = types.HandCard.deserialize(hc)
+            if hand_card.id != CardCatalog.NONE.id:
+                instance.hand.append(hand_card)
+
+        instance.discard = []
+        for discard_idx, count in enumerate(data.discard):
+            discard = types.Card.deserialize(discard_idx)
+            if discard.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.discard.append(discard)
+
+        instance.draw = []
+        for draw_idx, count in enumerate(data.draw):
+            draw = types.Card.deserialize(draw_idx)
+            if draw.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.draw.append(draw)
+
+        instance.exhaust = []
+        for exhaust_idx, count in enumerate(data.exhaust):
+            exhaust = types.Card.deserialize(exhaust_idx)
+            if exhaust.id != CardCatalog.NONE.id:
+                for _ in range(count):
+                    instance.exhaust.append(exhaust)
+
+        return instance
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CombatObs):
+            return False
+
+        attrs = [
+            "turn",
+            "hand",
+            "energy",
+            "block",
+            "effects",
+            "orbs",
+            "enemies",
+            "discard",
+            "draw",
+            "exhaust",
+        ]
+
+        for attr in attrs:
+            if getattr(self, attr) != getattr(other, attr):
+                return False
+
+        return True

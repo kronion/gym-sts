@@ -102,7 +102,7 @@ def validate_play(action: actions.PlayCard, observation: Observation) -> bool:
         # selection is ignored anyway.
         if card.has_target:
             enemy = enemies[target_index]
-            if enemy["is_gone"]:
+            if enemy.is_gone:
                 return False
 
     return card.is_playable

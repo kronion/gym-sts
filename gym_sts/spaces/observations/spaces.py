@@ -1,6 +1,7 @@
 from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
-from gym_sts.spaces import constants
+import gym_sts.spaces.constants.cards as card_consts
+from gym_sts.spaces import old_constants as constants
 
 
 def generate_card_space():
@@ -8,15 +9,17 @@ def generate_card_space():
     # how many cards you have
     # But this could be optimized
     return MultiDiscrete(
-        [constants.MAX_COPIES_OF_CARD + 1] * constants.NUM_CARDS_WITH_UPGRADES
+        [card_consts.MAX_COPIES_OF_CARD + 1] * card_consts.NUM_CARDS_WITH_UPGRADES
     )
 
 
 def generate_effect_space():
-    effect_space = Dict({
-        "sign": Discrete(2),
-        "value": MultiBinary(constants.LOG_MAX_EFFECT),
-    })
+    effect_space = Dict(
+        {
+            "sign": Discrete(2),
+            "value": MultiBinary(constants.LOG_MAX_EFFECT),
+        }
+    )
     return Tuple([effect_space] * constants.NUM_EFFECTS)
 
 

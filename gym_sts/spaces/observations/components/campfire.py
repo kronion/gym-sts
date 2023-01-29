@@ -1,53 +1,61 @@
-from gym.spaces import Dict, Discrete
+from __future__ import annotations
 
-from .base import ObsComponent
+from typing import Union
+
+from gym.spaces import Dict, Discrete, Space, Tuple
+from pydantic import BaseModel, Field
+
+import gym_sts.spaces.constants.campfire as campfire_consts
+from gym_sts.spaces.observations import types
+
+from .base import PydanticComponent
 
 
-class CampfireObs(ObsComponent):
-    def __init__(self, state: dict):
-        # Sane defaults
-        self.rest = False
-        self.smith = False
-        self.lift = False
-        self.toke = False
-        self.dig = False
-        self.recall = False
-        self.num_options = 0
-
-        if "game_state" in state:
-            game_state = state["game_state"]
-            if "screen_type" in game_state and game_state["screen_type"] == "REST":
-                screen_state = game_state["screen_state"]
-                if screen_state["has_rested"]:
-                    return
-
-                rest_options = screen_state["rest_options"]
-                possible_options = ["rest", "smith", "lift", "toke", "dig", "recall"]
-
-                for option in possible_options:
-                    if option in rest_options:
-                        setattr(self, option, True)
-                        self.num_options += 1
+class CampfireObs(PydanticComponent):
+    options: list[types.CampfireChoice] = Field([], alias="rest_options")
+    has_rested: bool = False
 
     @staticmethod
-    def space():
+    def space() -> Space:
         return Dict(
             {
-                "rest": Discrete(2),
-                "smith": Discrete(2),
-                "lift": Discrete(2),
-                "toke": Discrete(2),
-                "dig": Discrete(2),
-                "recall": Discrete(2),
+                "options": Tuple(
+                    [types.CampfireChoice.space()] * campfire_consts.MAX_NUM_OPTIONS
+                ),
+                "has_rested": Discrete(2),
             }
         )
 
     def serialize(self) -> dict:
+        options = [
+            types.CampfireChoice.serialize_empty()
+        ] * campfire_consts.MAX_NUM_OPTIONS
+        for i, option in enumerate(self.options):
+            options[i] = option.serialize()
+
         return {
-            "rest": int(self.rest),
-            "smith": int(self.smith),
-            "lift": int(self.lift),
-            "toke": int(self.toke),
-            "dig": int(self.dig),
-            "recall": int(self.recall),
+            "options": options,
+            "has_rested": int(self.has_rested),
         }
+
+    class SerializedState(BaseModel):
+        options: list[types.BinaryArray]
+        has_rested: int
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    @classmethod
+    def deserialize(cls, data: Union[dict, SerializedState]) -> CampfireObs:
+        if not isinstance(data, cls.SerializedState):
+            data = cls.SerializedState(**data)
+
+        options = []
+        for o in data.options:
+            option = types.CampfireChoice.deserialize(o)
+            if option != types.CampfireChoice.EMPTY:
+                options.append(option)
+
+        has_rested = bool(data.has_rested)
+
+        return cls(rest_options=options, has_rested=has_rested)

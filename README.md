@@ -112,3 +112,7 @@ pre-commit install
 # Optionally run the linters manually
 pre-commit run --all-files
 ```
+
+## Tests
+
+Simply run `pytest` from the project's root directory.

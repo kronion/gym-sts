@@ -1,4 +1,8 @@
+from typing import Union
+
 import numpy as np
+import numpy.typing as npt
+
 
 def to_binary_array(n: int, digits: int) -> np.ndarray:
     array = [0] * digits
@@ -19,7 +23,7 @@ def to_binary_array(n: int, digits: int) -> np.ndarray:
     return np.array(array, dtype=np.uint8)
 
 
-def from_binary_array(array: list[int]) -> int:
+def from_binary_array(array: Union[list[int], npt.NDArray[np.uint]]) -> int:
     total = 0
     place_value = 1
 

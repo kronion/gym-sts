@@ -3,7 +3,8 @@ from typing import Optional
 from gym.spaces import Discrete
 from pydantic import BaseModel, PrivateAttr
 
-from gym_sts.spaces import constants
+from gym_sts.spaces import old_constants as constants
+from gym_sts.spaces.constants import potions as potion_consts
 
 
 class Action(BaseModel):
@@ -82,7 +83,7 @@ def all_actions() -> list[Action]:
     for i in range(constants.NUM_CHOICES):
         actions.append(Choose(choice_index=i))
 
-    for i in range(constants.NUM_POTION_SLOTS):
+    for i in range(potion_consts.NUM_POTION_SLOTS):
         actions.append(UsePotion(potion_index=i))
         actions.append(DiscardPotion(potion_index=i))
         for j in range(constants.NUM_ENEMIES):

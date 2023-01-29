@@ -12,3 +12,6 @@ tmp
 
 # Never check the game in, wherever it may be in the tree
 desktop-1.0.jar
+
+# Don't check in hypothesis example database at this time
+.hypothesis

@@ -1,9 +1,15 @@
+from __future__ import annotations
+
 import functools
+from typing import Union
 
 import numpy as np
 from gym import spaces
+from pydantic import BaseModel
 
 from gym_sts.spaces import actions
+from gym_sts.spaces.old_constants import ScreenType
+
 from . import components
 
 
@@ -20,25 +26,65 @@ OBSERVATION_SPACE = spaces.Dict(
         "card_reward_state": components.CardRewardObs.space(),
         "combat_reward_state": components.CombatRewardObs.space(),
         "event_state": components.EventStateObs.space(),
-        # TODO: Possibly have Discrete space telling AI what screen it's on
-        # (e.g. screen type)
         "valid_action_mask": spaces.MultiBinary(len(actions.ACTIONS)),
     }
 )
 
 
 class Observation:
-    def __init__(self, state: dict):
-        self.persistent_state = components.PersistentStateObs(state)
-        self.combat_state = components.CombatObs(state)
-        self.shop_state = components.ShopObs(state)
-        self.campfire_state = components.CampfireObs(state)
-        self.card_reward_state = components.CardRewardObs(state)
-        self.combat_reward_state = components.CombatRewardObs(state)
-        self.event_state = components.EventStateObs(state)
+    class SerializedState(BaseModel):
+        campfire_state: components.CampfireObs.SerializedState
+        card_reward_state: components.CardRewardObs.SerializedState
+        combat_state: components.CombatObs.SerializedState
+        combat_reward_state: components.CombatRewardObs.SerializedState
+        persistent_state: components.PersistentStateObs.SerializedState
+        shop_state: components.ShopObs.SerializedState
 
-        # Keep a reference to the raw CommunicationMod response
-        self.state = state
+    def __init__(self, state: Union[dict, SerializedState]):
+        if isinstance(state, dict):
+            game_state = state.get("game_state", {})
+            screen_type = game_state.get("screen_type", ScreenType.NONE)
+            screen_state = game_state.get("screen_state", {})
+
+            self.persistent_state = components.PersistentStateObs(**game_state)
+
+            self.combat_state = components.CombatObs(game_state)
+            self.combat_reward_state = components.CombatRewardObs(game_state)
+
+            shop_state = screen_state if screen_type == ScreenType.SHOP_SCREEN else {}
+            self.shop_state = components.ShopObs(**shop_state)
+
+            campfire_state = screen_state if screen_type == ScreenType.REST else {}
+            self.campfire_state = components.CampfireObs(**campfire_state)
+
+            card_reward_state = (
+                screen_state if screen_type == ScreenType.CARD_REWARD else {}
+            )
+            self.card_reward_state = components.CardRewardObs(**card_reward_state)
+
+            self.event_state = components.EventStateObs(state)
+
+            # Keep a reference to the raw CommunicationMod response
+            self.state = state
+        else:
+            self.campfire_state = components.CampfireObs.deserialize(
+                state.campfire_state
+            )
+            self.card_reward_state = components.CardRewardObs.deserialize(
+                state.card_reward_state
+            )
+            self.combat_state = components.CombatObs.deserialize(state.combat_state)
+            self.combat_reward_state = components.CombatRewardObs.deserialize(
+                state.combat_reward_state
+            )
+            self.persistent_state = components.PersistentStateObs.deserialize(
+                state.persistent_state
+            )
+            self.shop_state = components.ShopObs.deserialize(state.shop_state)
+
+            # TODO this doesn't really work because we assume the keys will be present
+            # replace with a pydantic model?
+            self.state = {}
 
     @property
     def has_error(self) -> bool:
@@ -103,6 +149,7 @@ class Observation:
     def valid_actions(self) -> list[actions.Action]:
         # avoid circular import
         from gym_sts.envs.action_validation import get_valid
+
         return get_valid(self)
 
     def serialize(self) -> dict:
@@ -120,3 +167,8 @@ class Observation:
             "event_state": self.event_state.serialize(),
             "valid_action_mask": valid_action_mask,
         }
+
+    @classmethod
+    def deserialize(cls, raw_data: dict) -> Observation:
+        data = cls.SerializedState(**raw_data)
+        return cls(data)
