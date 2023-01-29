@@ -3,17 +3,12 @@ import time
 from gym_sts.spaces.actions import PlayCard
 
 
-def test_single_combat_spawns_into_gremlin_nob(single_combat_env):
+def test_single_combat_spawns_direct_into_combat(single_combat_env):
     single_combat_env.reset()
-
     obs = single_combat_env.observe()
 
     assert obs.in_combat
     assert obs.screen_type == "NONE"
-    enemies = obs.combat_state.enemies
-
-    assert len(enemies) == 1
-    assert enemies[0].id == "GremlinNob"
 
 
 def test_single_combat_resets_after_defeating_enemy(single_combat_env):

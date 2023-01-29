@@ -12,7 +12,7 @@ from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 from ray.train.rl import RLTrainer
 
-from gym_sts.envs import base
+from gym_sts.envs import base, single_combat
 from gym_sts.rl import action_masking
 
 
@@ -37,6 +37,7 @@ ENV = ff.DEFINE_dict(
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
     build_image=ff.Boolean(False),
+    single_combat=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
@@ -87,6 +88,11 @@ class Env(base.SlayTheSpireGymEnv):
         super().__init__(**cfg)
 
 
+class SingleCombatEnv(single_combat.SingleCombatSTSEnv):
+    def __init__(self, cfg: dict):
+        super().__init__(**cfg)
+
+
 def main(_):
     ray.init(address=None)
     # we need abspath's here because the cwd will be different later
@@ -109,7 +115,7 @@ def main(_):
     rl_config = RL.value.copy()
 
     ppo_config = {
-        "env": Env,
+        "env": SingleCombatEnv if ENV.value["single_combat"] else Env,
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,

@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import tempfile
 import time
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import docker
 import gym
@@ -39,6 +39,7 @@ class SlayTheSpireGymEnv(gym.Env):
         headless: bool = False,
         animate: bool = True,
         reboot_frequency: int = 0,
+        value_fn: Callable[[Observation], float] = obs_value,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -99,6 +100,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_space = OBSERVATION_SPACE
 
         self.observation_cache: Cache[Observation] = Cache()
+
+        self.value_fn = value_fn
 
         # Create states directory
         self.states_dir = self.output_dir / "states"
@@ -427,7 +430,7 @@ class SlayTheSpireGymEnv(gym.Env):
             if not success:
                 raise exceptions.StSError("No valid actions.")
 
-            reward = obs_value(obs) - obs_value(prev_obs)
+            reward = self.value_fn(obs) - self.value_fn(prev_obs)
             self.observation_cache.append(obs)
 
         info = {

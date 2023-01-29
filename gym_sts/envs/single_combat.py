@@ -1,14 +1,16 @@
+from gym_sts.spaces.observations import Observation
+
 from .base import SlayTheSpireGymEnv
 
 
 class SingleCombatSTSEnv(SlayTheSpireGymEnv):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, value_fn=single_combat_value, **kwargs)
 
     def reset(self, *args, **kwargs):
         res = super().reset(*args, **kwargs)
 
-        obs = self.communicator.basemod("fight Gremlin_Nob")
+        obs = self.communicator.basemod("fight 3_Sentries")
         assert obs.in_combat
         self.observation_cache.append(obs)
 
@@ -34,3 +36,13 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
             should_reset = True
 
         return ser, reward, should_reset, info
+
+
+def single_combat_value(obs: Observation) -> float:
+    max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
+    enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)
+
+    if max_hp == 0:
+        return 100
+
+    return ((max_hp - enemy_hp) / max_hp) * 100
