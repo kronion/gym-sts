@@ -4,13 +4,16 @@ from .base import SlayTheSpireGymEnv
 
 
 class SingleCombatSTSEnv(SlayTheSpireGymEnv):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, value_fn=single_combat_value, **kwargs)
+    def __init__(self, *args, enemy: str = "3_Sentries", **kwargs):
+        if "value_fn" not in kwargs:
+            kwargs["value_fn"] = single_combat_value
+        super().__init__(*args, **kwargs)
+        self.enemy = enemy
 
     def reset(self, *args, **kwargs):
         res = super().reset(*args, **kwargs)
 
-        obs = self.communicator.basemod("fight The_Guardian")
+        obs = self.communicator.basemod(f"fight {self.enemy}")
         assert obs.in_combat
         self.observation_cache.append(obs)
 

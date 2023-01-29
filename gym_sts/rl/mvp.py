@@ -37,7 +37,6 @@ ENV = ff.DEFINE_dict(
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
     build_image=ff.Boolean(False),
-    single_combat=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
@@ -82,6 +81,13 @@ SCALING = ff.DEFINE_dict(
     use_gpu=ff.Boolean(False),
 )
 
+SINGLE_COMBAT = ff.DEFINE_dict(
+    "single_combat",
+    use=ff.Boolean(False),
+    ascension=ff.Integer(20),
+    enemy=ff.String("3_Sentries"),
+)
+
 
 class Env(base.SlayTheSpireGymEnv):
     def __init__(self, cfg: dict):
@@ -107,6 +113,9 @@ def main(_):
         "headless": ENV.value["headless"],
         "animate": ENV.value["animate"],
     }
+    if SINGLE_COMBAT.value["use"]:
+        env_config["ascension"] = SINGLE_COMBAT.value["ascension"]
+        env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
 
     if ENV.value["build_image"]:
         logging.info("build_image")
@@ -115,7 +124,7 @@ def main(_):
     rl_config = RL.value.copy()
 
     ppo_config = {
-        "env": SingleCombatEnv if ENV.value["single_combat"] else Env,
+        "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
