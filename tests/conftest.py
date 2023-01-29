@@ -1,6 +1,7 @@
 import pytest
 
 from gym_sts.envs.base import SlayTheSpireGymEnv
+from gym_sts.envs.single_combat import SingleCombatSTSEnv
 
 
 def pytest_addoption(parser):
@@ -28,6 +29,18 @@ def env(request):
     headless = request.config.getoption("headless")
 
     env = SlayTheSpireGymEnv(lib_dir, mods_dir, headless=headless)
+    yield env
+
+    env.close()
+
+
+@pytest.fixture(scope="session")
+def single_combat_env(request):
+    lib_dir = request.config.getoption("lib_dir")
+    mods_dir = request.config.getoption("mods_dir")
+    headless = request.config.getoption("headless")
+
+    env = SingleCombatSTSEnv(lib_dir, mods_dir, headless=headless)
     yield env
 
     env.close()
