@@ -10,7 +10,7 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
     def reset(self, *args, **kwargs):
         res = super().reset(*args, **kwargs)
 
-        obs = self.communicator.basemod("fight 3_Sentries")
+        obs = self.communicator.basemod("fight The_Guardian")
         assert obs.in_combat
         self.observation_cache.append(obs)
 
