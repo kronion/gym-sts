@@ -1,7 +1,6 @@
 import atexit
 import datetime
 import logging
-import os
 import pathlib
 import random
 import shutil
@@ -201,12 +200,11 @@ class SlayTheSpireGymEnv(gym.Env):
         self._generate_communication_mod_config()
         self._generate_superfastmode_config()
 
-        os.chdir(tmp_dir)
-
         self.process = subprocess.Popen(
             [constants.JAVA_INSTALL, "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
             stdout=self.logfile,
             stderr=self.logfile,
+            cwd=tmp_dir,
         )
 
     def _do_action(self, action: str) -> Observation:
