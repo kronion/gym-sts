@@ -40,6 +40,7 @@ class SlayTheSpireGymEnv(gym.Env):
         animate: bool = True,
         reboot_frequency: int = 0,
         value_fn: Callable[[Observation], float] = obs_value,
+        ascension: int = 0,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -102,6 +103,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_cache: Cache[Observation] = Cache()
 
         self.value_fn = value_fn
+
+        self.ascension = ascension
 
         # Create states directory
         self.states_dir = self.output_dir / "states"
@@ -339,7 +342,7 @@ class SlayTheSpireGymEnv(gym.Env):
             sts_seed = SeedHelpers.make_seed(self.prng)
         self.sts_seed = sts_seed
 
-        obs = self.communicator.start("DEFECT", 0, self.sts_seed)
+        obs = self.communicator.start("DEFECT", self.ascension, self.sts_seed)
 
         # In my experience the game isn't actually stable here, and we have
         # to wait for a bit before the game actually starts.
