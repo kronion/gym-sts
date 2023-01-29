@@ -6,6 +6,7 @@ from gym_sts.spaces.data import EVENT_DATA
 
 from .base import ObsComponent
 
+
 # Processing text is annoying, especially when text is the only real indicator for event
 # state and the numbers can sometimes change.
 # So, each text fragment (extracted from game files) has an individual bit flag that
