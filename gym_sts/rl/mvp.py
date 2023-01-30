@@ -135,6 +135,11 @@ def main(_):
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
+        "fcnet_hiddens": [4096, 2048, 1024, 512],
+        "fcnet_activation": "relu",
+        # "horizon": 64,  # just for reporting some rewards
+        # "soft_horizon": True,
+        # "no_done_at_end": True,
         "model": {
             "custom_model": "masked",
             "fcnet_hiddens": [256, 256],
