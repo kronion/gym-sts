@@ -133,7 +133,7 @@ def main(_):
         # "no_done_at_end": True,
         "model": {
             "custom_model": "masked",
-            "fcnet_hiddens": [4096, 2048, 1024, 512],
+            "fcnet_hiddens": [256, 256],
             "fcnet_activation": "relu",
         },
     }
