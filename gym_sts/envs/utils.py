@@ -2,6 +2,8 @@ import random
 import typing as tp
 from typing import Optional
 
+import numpy as np
+
 from gym_sts.spaces.observations import Observation
 
 
@@ -82,14 +84,15 @@ def obs_value(obs: Observation) -> float:
     return value
 
 
-def single_combat_value(obs: Observation) -> float:
+def single_combat_value(obs: Observation) -> np.float64:
     max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
     enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)
 
     self_hp = obs.persistent_state.hp
+    self_max_hp = obs.persistent_state.max_hp
 
     if max_hp == 0:
         enemy_hp = 1
         max_hp = 1
 
-    return ((max_hp - enemy_hp) / max_hp) * 100 + self_hp
+    return np.mean([(max_hp - enemy_hp) / max_hp, self_hp / self_max_hp])
