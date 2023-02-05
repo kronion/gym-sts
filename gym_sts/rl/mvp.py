@@ -37,7 +37,7 @@ ENV = ff.DEFINE_dict(
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
     build_image=ff.Boolean(False),
-    reboot_frequency=ff.Integer(20, 'Reboot game every n resets.'),
+    reboot_frequency=ff.Integer(50, 'Reboot game every n resets.'),
     reboot_on_error=ff.Boolean(False),
 )
 

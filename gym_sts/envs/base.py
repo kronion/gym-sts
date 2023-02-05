@@ -396,7 +396,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         try:
             obs = self.communicator._manual_command(action.to_command())
-        except exceptions.StSError as e:
+        except Exception as e:
             logging.error(e)
             print(prev_obs)
             print(action_id)

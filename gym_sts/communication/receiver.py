@@ -8,7 +8,7 @@ from gym_sts import exceptions
 from gym_sts import exceptions
 
 class Receiver:
-    def __init__(self, fn, timeout: float = 50, verbose: bool = True):
+    def __init__(self, fn, timeout: float = 50):
         self.fh = open(fn, "r")
 
         # Reading the pipe does not block if there are no contents
@@ -18,7 +18,6 @@ class Receiver:
         self.timeout = timeout
         self.sleep_time = 0.05
         self.num_steps = int(timeout / self.sleep_time)
-        self.verbose = verbose
 
     def empty_fifo(self) -> None:
         """
