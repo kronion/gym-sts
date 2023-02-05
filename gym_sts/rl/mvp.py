@@ -117,11 +117,16 @@ def main(_):
         "mods_dir": os.path.abspath(ENV.value["mods"]),
         "output_dir": output_dir,
     }
-    for key in ["headless", "animate", "reboot_frequency", "reboot_on_error"]:
+    for key in [
+        "headless",
+        "animate",
+        "reboot_frequency",
+        "reboot_on_error",
+        "ascension",
+    ]:
         env_config[key] = ENV.value[key]
 
     if SINGLE_COMBAT.value["use"]:
-        env_config["ascension"] = ENV.value["ascension"]
         env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
 
     if ENV.value["build_image"]:
