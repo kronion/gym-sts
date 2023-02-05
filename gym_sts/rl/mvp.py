@@ -38,11 +38,17 @@ ENV = ff.DEFINE_dict(
     animate=ff.Boolean(False),
     ascension=ff.Integer(20),
     build_image=ff.Boolean(False),
+    reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
+    reboot_on_error=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
     "tune",
-    name=ff.String("sts-rl", "Name of the ray experiment"),
+    run=dict(
+        name=ff.String("sts-rl", "Name of the ray experiment"),
+        local_dir=ff.String(None),  # default is ~/ray_results/
+        verbose=ff.Integer(3),
+    ),
     checkpoint_config=dict(
         checkpoint_frequency=ff.Integer(20),
         checkpoint_at_end=ff.Boolean(False),
@@ -57,7 +63,6 @@ TUNE = ff.DEFINE_dict(
         sync_on_checkpoint=ff.Boolean(True),
         sync_period=ff.Integer(300),
     ),
-    verbose=ff.Integer(3),
 )
 
 WANDB = ff.DEFINE_dict(
@@ -65,7 +70,8 @@ WANDB = ff.DEFINE_dict(
     use=ff.Boolean(False),
     entity=ff.String("sts-ai"),
     project=ff.String("sts-rllib"),
-    api_key_file=ff.String("~/.wandb"),
+    api_key_file=ff.String(None),
+    api_key=ff.String(None),
     log_config=ff.Boolean(False),
     save_checkpoints=ff.Boolean(False),
 )
@@ -110,9 +116,10 @@ def main(_):
         "lib_dir": os.path.abspath(ENV.value["lib"]),
         "mods_dir": os.path.abspath(ENV.value["mods"]),
         "output_dir": output_dir,
-        "headless": ENV.value["headless"],
-        "animate": ENV.value["animate"],
     }
+    for key in ["headless", "animate", "reboot_frequency", "reboot_on_error"]:
+        env_config[key] = ENV.value[key]
+
     if SINGLE_COMBAT.value["use"]:
         env_config["ascension"] = ENV.value["ascension"]
         env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
@@ -128,9 +135,6 @@ def main(_):
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
-        # "horizon": 64,  # just for reporting some rewards
-        # "soft_horizon": True,
-        # "no_done_at_end": True,
         "model": {
             "custom_model": "masked",
             "fcnet_hiddens": [256, 256],
@@ -148,18 +152,19 @@ def main(_):
     callbacks = []
     wandb_config = WANDB.value.copy()
     if wandb_config.pop("use"):
-        wandb_callback = WandbLoggerCallback(**wandb_config)
+        wandb_callback = WandbLoggerCallback(
+            name=TUNE.value["run"]["name"], **wandb_config
+        )
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
     run_config = config.RunConfig(
-        name=tune_config["name"],
         callbacks=callbacks,
         checkpoint_config=checkpoint_config,
         sync_config=sync_config,
-        verbose=tune_config["verbose"],
+        **tune_config["run"],
     )
 
     tuner = tune.Tuner(
