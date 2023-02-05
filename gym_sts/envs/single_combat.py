@@ -40,10 +40,8 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
     def step(self, action_id: int):
         ser, reward, should_reset, info = super().step(action_id)
 
-        if (
-            not info["observation"].in_combat
-            or info["observation"].screen_type != "NONE"
-        ):
+        # When you test out a new combat, make sure this condition works
+        if not info["observation"].in_combat:
             should_reset = True
 
         return ser, reward, should_reset, info
