@@ -1,24 +1,32 @@
+from typing import Callable
+
 from gym_sts.spaces.observations import Observation
 
 from .base import SlayTheSpireGymEnv
+from .utils import single_combat_value
 
 
 class SingleCombatSTSEnv(SlayTheSpireGymEnv):
-    def __init__(self, *args, enemy: str = "3_Sentries", **kwargs):
-        if "value_fn" not in kwargs:
-            kwargs["value_fn"] = single_combat_value
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        *args,
+        value_fn: Callable[[Observation], float] = single_combat_value,
+        enemy: str = "3_Sentries",
+        **kwargs,
+    ):
+        super().__init__(*args, value_fn=value_fn, **kwargs)  # type: ignore[misc]
         self.enemy = enemy
 
-    def reset(self, *args, **kwargs):
-        res = super().reset(*args, **kwargs)
+    def reset(self, *args, return_info: bool = False, **kwargs):
+        super().reset(*args, return_info=return_info, **kwargs)  # type: ignore[misc]
 
         obs = self.communicator.basemod(f"fight {self.enemy}")
         assert obs.in_combat
         self.observation_cache.append(obs)
 
-        if type(res) == tuple and len(res) == 2:
-            # params.return_info is set to true
+        if return_info:
+            # prng should have already been set in super().reset
+            assert self.prng is not None
             info = {
                 "seed": self.seed,
                 "sts_seed": self.sts_seed,
@@ -39,16 +47,3 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
             should_reset = True
 
         return ser, reward, should_reset, info
-
-
-def single_combat_value(obs: Observation) -> float:
-    max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
-    enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)
-
-    self_hp = obs.persistent_state.hp
-
-    if max_hp == 0:
-        enemy_hp = 1
-        max_hp = 1
-
-    return ((max_hp - enemy_hp) / max_hp) * 100 + self_hp

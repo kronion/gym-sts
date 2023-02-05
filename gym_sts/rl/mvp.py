@@ -36,6 +36,7 @@ ENV = ff.DEFINE_dict(
     out=ff.String(None),
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
+    ascension=ff.Integer(20),
     build_image=ff.Boolean(False),
 )
 
@@ -84,7 +85,6 @@ SCALING = ff.DEFINE_dict(
 SINGLE_COMBAT = ff.DEFINE_dict(
     "single_combat",
     use=ff.Boolean(False),
-    ascension=ff.Integer(20),
     enemy=ff.String("3_Sentries"),
 )
 
@@ -114,7 +114,7 @@ def main(_):
         "animate": ENV.value["animate"],
     }
     if SINGLE_COMBAT.value["use"]:
-        env_config["ascension"] = SINGLE_COMBAT.value["ascension"]
+        env_config["ascension"] = ENV.value["ascension"]
         env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
 
     if ENV.value["build_image"]:
