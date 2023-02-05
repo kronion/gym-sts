@@ -37,6 +37,8 @@ ENV = ff.DEFINE_dict(
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
     build_image=ff.Boolean(False),
+    reboot_frequency=ff.Integer(50, 'Reboot game every n resets.'),
+    reboot_on_error=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
@@ -102,9 +104,10 @@ def main(_):
         "lib_dir": os.path.abspath(ENV.value["lib"]),
         "mods_dir": os.path.abspath(ENV.value["mods"]),
         "output_dir": output_dir,
-        "headless": ENV.value["headless"],
-        "animate": ENV.value["animate"],
     }
+    for key in [
+        "headless", "animate", "reboot_frequency", "reboot_on_error"]:
+        env_config[key] = ENV.value[key]
 
     if ENV.value["build_image"]:
         logging.info("build_image")
@@ -117,9 +120,6 @@ def main(_):
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
-        # "horizon": 64,  # just for reporting some rewards
-        # "soft_horizon": True,
-        # "no_done_at_end": True,
         "model": {
             "custom_model": "masked",
         },

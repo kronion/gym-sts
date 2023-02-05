@@ -5,6 +5,7 @@ import time
 
 from gym_sts import exceptions
 
+from gym_sts import exceptions
 
 class Receiver:
     def __init__(self, fn, timeout: float = 50):
