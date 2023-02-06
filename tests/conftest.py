@@ -34,7 +34,7 @@ def env(request):
     env.close()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def single_combat_env(request):
     lib_dir = request.config.getoption("lib_dir")
     mods_dir = request.config.getoption("mods_dir")
