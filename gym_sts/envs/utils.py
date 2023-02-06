@@ -95,4 +95,4 @@ def single_combat_value(obs: Observation) -> np.float64:
         enemy_hp = 1
         max_hp = 1
 
-    return np.mean([(max_hp - enemy_hp) / max_hp, self_hp / self_max_hp])
+    return np.prod([(max_hp - enemy_hp) / max_hp, self_hp / self_max_hp])
