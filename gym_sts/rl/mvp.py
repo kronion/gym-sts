@@ -7,13 +7,13 @@ from absl import app, logging
 from gym import spaces
 from ray import tune
 from ray.air import config
-from ray.air.callbacks.wandb import WandbLoggerCallback
 from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 from ray.train.rl import RLTrainer
 
 from gym_sts.envs import base
 from gym_sts.rl import action_masking
+from gym_sts.rl.utils import CustomWandbLoggerCallback
 
 
 def check_rllib_bug(space: spaces.Space):
@@ -37,7 +37,7 @@ ENV = ff.DEFINE_dict(
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
     build_image=ff.Boolean(False),
-    reboot_frequency=ff.Integer(50, 'Reboot game every n resets.'),
+    reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
     reboot_on_error=ff.Boolean(False),
 )
 
@@ -99,14 +99,14 @@ def main(_):
     output_dir = ENV.value["out"]
     if output_dir is not None:
         output_dir = os.path.abspath(output_dir)
+    assert output_dir is not None
 
     env_config = {
         "lib_dir": os.path.abspath(ENV.value["lib"]),
         "mods_dir": os.path.abspath(ENV.value["mods"]),
         "output_dir": output_dir,
     }
-    for key in [
-        "headless", "animate", "reboot_frequency", "reboot_on_error"]:
+    for key in ["headless", "animate", "reboot_frequency", "reboot_on_error"]:
         env_config[key] = ENV.value[key]
 
     if ENV.value["build_image"]:
@@ -135,9 +135,24 @@ def main(_):
     callbacks = []
     wandb_config = WANDB.value.copy()
     if wandb_config.pop("use"):
-        wandb_callback = WandbLoggerCallback(
-            name=TUNE.value["run"]["name"],
-            **wandb_config)
+        # Remove config that's specific to the ray's wandb integration
+        # api_key_file = wandb_config.pop("api_key_file")
+        # api_key = wandb_config.pop("api_key")
+        # log_config = wandb_config.pop("log_config")
+        # save_checkpoints = wandb_config.pop("save_checkpoints")
+
+        wandb_config["name"] = TUNE.value["run"]["name"]
+        wandb_config["save_base_path"] = f"{output_dir}/states"
+        # run = setup_wandb(config=wandb_config)
+        # assert run is not None
+        # run_id = str(int(time.time()))  # Unix time
+        # wandb_config["id"] = run_id
+
+        wandb_callback = CustomWandbLoggerCallback(
+            # log_config=log_config,
+            # save_checkpoints=save_checkpoints,
+            **wandb_config
+        )
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value
