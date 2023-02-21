@@ -12,7 +12,7 @@ from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 from ray.train.rl import RLTrainer
 
-from gym_sts.envs import base
+from gym_sts.envs import base, single_combat
 from gym_sts.rl import action_masking
 
 
@@ -36,8 +36,9 @@ ENV = ff.DEFINE_dict(
     out=ff.String(None),
     headless=ff.Boolean(True),
     animate=ff.Boolean(False),
+    ascension=ff.Integer(20),
     build_image=ff.Boolean(False),
-    reboot_frequency=ff.Integer(50, 'Reboot game every n resets.'),
+    reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
     reboot_on_error=ff.Boolean(False),
 )
 
@@ -87,8 +88,19 @@ SCALING = ff.DEFINE_dict(
     use_gpu=ff.Boolean(False),
 )
 
+SINGLE_COMBAT = ff.DEFINE_dict(
+    "single_combat",
+    use=ff.Boolean(False),
+    enemy=ff.String("3_Sentries"),
+)
+
 
 class Env(base.SlayTheSpireGymEnv):
+    def __init__(self, cfg: dict):
+        super().__init__(**cfg)
+
+
+class SingleCombatEnv(single_combat.SingleCombatSTSEnv):
     def __init__(self, cfg: dict):
         super().__init__(**cfg)
 
@@ -106,8 +118,16 @@ def main(_):
         "output_dir": output_dir,
     }
     for key in [
-        "headless", "animate", "reboot_frequency", "reboot_on_error"]:
+        "headless",
+        "animate",
+        "reboot_frequency",
+        "reboot_on_error",
+        "ascension",
+    ]:
         env_config[key] = ENV.value[key]
+
+    if SINGLE_COMBAT.value["use"]:
+        env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
 
     if ENV.value["build_image"]:
         logging.info("build_image")
@@ -116,12 +136,14 @@ def main(_):
     rl_config = RL.value.copy()
 
     ppo_config = {
-        "env": Env,
+        "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
         "framework": "torch",
         "eager_tracing": True,
         "model": {
             "custom_model": "masked",
+            "fcnet_hiddens": [256, 256],
+            "fcnet_activation": "relu",
         },
     }
     ppo_config.update(rl_config)
@@ -136,8 +158,8 @@ def main(_):
     wandb_config = WANDB.value.copy()
     if wandb_config.pop("use"):
         wandb_callback = WandbLoggerCallback(
-            name=TUNE.value["run"]["name"],
-            **wandb_config)
+            name=TUNE.value["run"]["name"], **wandb_config
+        )
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value

@@ -1,14 +1,13 @@
 import atexit
 import datetime
 import logging
-import os
 import pathlib
 import random
 import shutil
 import subprocess
 import tempfile
 import time
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 import docker
 import gym
@@ -40,6 +39,8 @@ class SlayTheSpireGymEnv(gym.Env):
         animate: bool = True,
         reboot_frequency: Optional[int] = None,
         reboot_on_error: bool = False,
+        value_fn: Callable[[Observation], float] = obs_value,
+        ascension: int = 0,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -103,6 +104,10 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_space = OBSERVATION_SPACE
 
         self.observation_cache: Cache[Observation] = Cache()
+
+        self.value_fn = value_fn
+
+        self.ascension = ascension
 
         # Create states directory
         self.states_dir = self.output_dir / "states"
@@ -199,12 +204,11 @@ class SlayTheSpireGymEnv(gym.Env):
         self._generate_communication_mod_config()
         self._generate_superfastmode_config()
 
-        os.chdir(tmp_dir)
-
         self.process = subprocess.Popen(
             [constants.JAVA_INSTALL, "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
             stdout=self.logfile,
             stderr=self.logfile,
+            cwd=tmp_dir,
         )
 
     def _do_action(self, action: str) -> Observation:
@@ -342,7 +346,7 @@ class SlayTheSpireGymEnv(gym.Env):
             sts_seed = SeedHelpers.make_seed(self.prng)
         self.sts_seed = sts_seed
 
-        obs = self.communicator.start("DEFECT", 0, self.sts_seed)
+        obs = self.communicator.start("DEFECT", self.ascension, self.sts_seed)
 
         # In my experience the game isn't actually stable here, and we have
         # to wait for a bit before the game actually starts.
@@ -445,7 +449,7 @@ class SlayTheSpireGymEnv(gym.Env):
             if not success:
                 raise exceptions.StSError("No valid actions.")
 
-            reward = obs_value(obs) - obs_value(prev_obs)
+            reward = self.value_fn(obs) - self.value_fn(prev_obs)
             self.observation_cache.append(obs)
 
         info = {
