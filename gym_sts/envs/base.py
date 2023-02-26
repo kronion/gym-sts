@@ -21,7 +21,7 @@ from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
 from .action_validation import validate
 from .types import ResetParams
-from .utils import Cache, SeedHelpers, obs_value
+from .utils import Cache, SeedHelpers, full_game_obs_value
 
 
 CONTAINER_OUTDIR = "/game/out"
@@ -39,7 +39,7 @@ class SlayTheSpireGymEnv(gym.Env):
         animate: bool = True,
         reboot_frequency: Optional[int] = None,
         reboot_on_error: bool = False,
-        value_fn: Callable[[Observation], float] = obs_value,
+        value_fn: Callable[[Observation], float] = full_game_obs_value,
         ascension: int = 0,
     ):
         """
