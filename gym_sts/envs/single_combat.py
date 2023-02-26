@@ -11,18 +11,21 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
         self,
         *args,
         value_fn: Callable[[Observation], float] = single_combat_value,
-        enemy: str = "3_Sentries",
+        enemies: List[str] = ["3_Sentries"],
         cards: List[str],
         add_relics: List[str],
         **kwargs,
     ):
         super().__init__(*args, value_fn=value_fn, **kwargs)  # type: ignore[misc]
-        self.enemy = enemy
+        self.enemies = enemies
         self.cards = cards
         self.add_relics = add_relics
 
     def reset(self, *args, return_info: bool = False, **kwargs):
         super().reset(*args, return_info=return_info, **kwargs)  # type: ignore[misc]
+
+        # prng should have already been set in super().reset
+        assert self.prng is not None
 
         self.communicator.basemod("deck remove all")
 
@@ -32,14 +35,13 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
         for relic in self.add_relics:
             self.communicator.basemod(f"relic add {relic}")
 
-        obs = self.communicator.basemod(f"fight {self.enemy}")
+        enemy = self.prng.choice(self.enemies)
+        obs = self.communicator.basemod(f"fight {enemy}")
 
         assert obs.in_combat
         self.observation_cache.append(obs)
 
         if return_info:
-            # prng should have already been set in super().reset
-            assert self.prng is not None
             info = {
                 "seed": self.seed,
                 "sts_seed": self.sts_seed,
