@@ -42,14 +42,22 @@ class CombatObs(ObsComponent):
             self.turn = combat_state["turn"]
 
             self.hand = [types.HandCard(**card) for card in combat_state["hand"]]
+
             self.discard = [types.Card(**card) for card in combat_state["discard_pile"]]
             self.discard.sort()
+
+            # TODO what if we have frozen eye? Then the draw order matters.
             self.draw = [types.Card(**card) for card in combat_state["draw_pile"]]
             self.draw.sort()
+
             self.exhaust = [types.Card(**card) for card in combat_state["exhaust_pile"]]
             self.exhaust.sort()
 
-            self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
+            enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
+            # CommunicationMod continues to send data for killed enemies/minions,
+            # so we need to filter them out.
+            self.enemies = [e for e in enemies if not e.is_gone]
+            assert len(self.enemies) <= constants.NUM_ENEMIES
 
             player_state = combat_state["player"]
             self.block = player_state["block"]
@@ -94,6 +102,7 @@ class CombatObs(ObsComponent):
         orbs = serializers.serialize_orbs(self.orbs)
 
         enemies = [types.Enemy.serialize_empty()] * constants.NUM_ENEMIES
+
         for i, enemy in enumerate(self.enemies):
             enemies[i] = enemy.serialize()
 
@@ -175,6 +184,7 @@ class CombatObs(ObsComponent):
             if discard.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.discard.append(discard)
+        instance.discard.sort()
 
         instance.draw = []
         for draw_idx, count in enumerate(data.draw):
@@ -182,6 +192,7 @@ class CombatObs(ObsComponent):
             if draw.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.draw.append(draw)
+        instance.draw.sort()
 
         instance.exhaust = []
         for exhaust_idx, count in enumerate(data.exhaust):
@@ -189,6 +200,7 @@ class CombatObs(ObsComponent):
             if exhaust.id != CardCatalog.NONE.id:
                 for _ in range(count):
                     instance.exhaust.append(exhaust)
+        instance.exhaust.sort()
 
         return instance
 
