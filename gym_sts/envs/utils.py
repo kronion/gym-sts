@@ -92,7 +92,10 @@ def single_combat_value(obs: Observation) -> np.float64:
     self_max_hp = obs.persistent_state.max_hp
 
     if max_hp == 0:
-        enemy_hp = 1
+        enemy_hp = 0
         max_hp = 1
 
-    return np.mean([(max_hp - enemy_hp) / max_hp, self_hp / self_max_hp])
+    p_damage = (max_hp - enemy_hp) / max_hp
+    p_hp = self_hp / self_max_hp
+
+    return np.prod([p_hp, p_damage]) + p_damage * 0.01
