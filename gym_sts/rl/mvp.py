@@ -92,6 +92,8 @@ SINGLE_COMBAT = ff.DEFINE_dict(
     "single_combat",
     use=ff.Boolean(False),
     enemy=ff.String("3_Sentries"),
+    cards=ff.StringList(["Strike_B"] * 4 + ["Defend_B"] * 4 + ["Zap"] + ["Dualcast"]),
+    add_relics=ff.StringList([]),
 )
 
 
@@ -128,6 +130,8 @@ def main(_):
 
     if SINGLE_COMBAT.value["use"]:
         env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
+        env_config["cards"] = SINGLE_COMBAT.value["cards"]
+        env_config["add_relics"] = SINGLE_COMBAT.value["add_relics"]
 
     if ENV.value["build_image"]:
         logging.info("build_image")

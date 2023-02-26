@@ -84,7 +84,7 @@ def obs_value(obs: Observation) -> float:
     return value
 
 
-def single_combat_value(obs: Observation) -> np.float64:
+def single_combat_value(obs: Observation) -> float:
     max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
     enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)
 
@@ -98,4 +98,4 @@ def single_combat_value(obs: Observation) -> np.float64:
     p_damage = (max_hp - enemy_hp) / max_hp
     p_hp = self_hp / self_max_hp
 
-    return np.prod([p_hp, p_damage]) + p_damage * 0.01
+    return float(np.prod([p_hp, p_damage]) + p_damage * 0.01)

@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List
 
 from gym_sts.spaces.observations import Observation
 
@@ -12,15 +12,28 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
         *args,
         value_fn: Callable[[Observation], float] = single_combat_value,
         enemy: str = "3_Sentries",
+        cards: List[str],
+        add_relics: List[str],
         **kwargs,
     ):
         super().__init__(*args, value_fn=value_fn, **kwargs)  # type: ignore[misc]
         self.enemy = enemy
+        self.cards = cards
+        self.add_relics = add_relics
 
     def reset(self, *args, return_info: bool = False, **kwargs):
         super().reset(*args, return_info=return_info, **kwargs)  # type: ignore[misc]
 
+        self.communicator.basemod("deck remove all")
+
+        for card in self.cards:
+            self.communicator.basemod(f"deck add {card}")
+
+        for relic in self.add_relics:
+            self.communicator.basemod(f"relic add {relic}")
+
         obs = self.communicator.basemod(f"fight {self.enemy}")
+
         assert obs.in_combat
         self.observation_cache.append(obs)
 
