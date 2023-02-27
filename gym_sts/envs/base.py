@@ -447,6 +447,7 @@ class SlayTheSpireGymEnv(gym.Env):
                     success = True
                     break
             if not success:
+                print(obs.state)
                 raise exceptions.StSError("No valid actions.")
 
             reward = self.value_fn(obs) - self.value_fn(prev_obs)
