@@ -80,6 +80,11 @@ RL = ff.DEFINE_dict(
     "rl",
     rollout_fragment_length=ff.Integer(32),
     train_batch_size=ff.Integer(1024),
+    model=dict(
+        custom_model=ff.String("masked"),
+        fcnet_hiddens=ff.Sequence([256, 256, 256, 256]),
+        fcnet_activation=ff.String("relu"),
+    ),
 )
 
 SCALING = ff.DEFINE_dict(
@@ -147,11 +152,6 @@ def main(_):
         # "horizon": 64,  # just for reporting some rewards
         # "soft_horizon": True,
         # "no_done_at_end": True,
-        "model": {
-            "custom_model": "masked",
-            "fcnet_hiddens": [256, 256, 256, 256],
-            "fcnet_activation": "relu",
-        },
     }
     ppo_config.update(rl_config)
 
