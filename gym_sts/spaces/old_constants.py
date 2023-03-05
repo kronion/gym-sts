@@ -358,7 +358,7 @@ NUM_KEYS = len(ALL_KEYS)
 # I don't know if 15 is enough, I know the card flipping game has at least 12
 NUM_CHOICES = 16
 
-NUM_ENEMIES = 8
+NUM_ENEMIES = 6
 
 # I really don't know the number of monster types
 NUM_MONSTER_TYPES = len(ALL_MONSTER_TYPES)
