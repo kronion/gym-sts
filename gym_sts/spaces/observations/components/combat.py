@@ -53,10 +53,7 @@ class CombatObs(ObsComponent):
             self.exhaust = [types.Card(**card) for card in combat_state["exhaust_pile"]]
             self.exhaust.sort()
 
-            enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
-            # CommunicationMod continues to send data for killed enemies/minions,
-            # so we need to filter them out.
-            self.enemies = [e for e in enemies if not e.is_gone]
+            self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
             assert len(self.enemies) <= constants.NUM_ENEMIES
 
             player_state = combat_state["player"]
