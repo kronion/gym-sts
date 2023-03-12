@@ -80,6 +80,7 @@ RL = ff.DEFINE_dict(
     "rl",
     rollout_fragment_length=ff.Integer(32),
     train_batch_size=ff.Integer(1024),
+    num_workers=ff.Integer(0),
     model=dict(
         custom_model=ff.String("masked"),
         fcnet_hiddens=ff.Sequence([256, 256, 256, 256]),
@@ -154,6 +155,10 @@ def main(_):
         # "no_done_at_end": True,
     }
     ppo_config.update(rl_config)
+
+    # algorithm = ppo.PPO(ppo_config)
+    # algorithm.restore("/home/spdskatr/ray_results/potato/artifacts/checkpoint_sts-rl:v12")
+    # raise Exception("hi")
 
     trainer = RLTrainer(
         scaling_config=config.ScalingConfig(**SCALING.value),
