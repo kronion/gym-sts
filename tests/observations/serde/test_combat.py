@@ -25,7 +25,7 @@ def test_dead_minions_dont_overflow_serde_bounds(env: SlayTheSpireGymEnv):
     overflow the bounds of the serialization representation.
     """
 
-    env.reset()
+    env.reset(seed=42)
 
     # Enter combat
     env.communicator.basemod("fight Reptomancer")
@@ -33,7 +33,7 @@ def test_dead_minions_dont_overflow_serde_bounds(env: SlayTheSpireGymEnv):
     # Add enough HP that we can just wait for tons of minions to spawn and kamikaze
     env.communicator.basemod("maxhp add 900")
 
-    for _ in range(20):
+    for _ in range(22):
         obs = env.observe(add_to_cache=True)
         orig_state = obs.combat_state
         ser = orig_state.serialize()
@@ -43,3 +43,10 @@ def test_dead_minions_dont_overflow_serde_bounds(env: SlayTheSpireGymEnv):
 
         # End turn
         env.step(0)
+
+    # Confirm that attacking a specific enemy index works as expected.
+    # We attack one of Reptomancer's daggers and confirm that its health decreases.
+    env.step(75)
+    obs = env.observe(add_to_cache=True)
+    enemies = obs.combat_state.enemies
+    assert enemies[1].current_hp == 16
