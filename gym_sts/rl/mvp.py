@@ -14,6 +14,7 @@ from ray.train.rl import RLTrainer
 
 from gym_sts.envs import base, single_combat
 from gym_sts.rl import action_masking
+from gym_sts.rl.metrics import StSCustomMetricCallbacks
 
 
 def check_rllib_bug(space: spaces.Space):
@@ -148,6 +149,7 @@ def main(_):
     ppo_config = {
         "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
+        "callbacks": StSCustomMetricCallbacks,
         "framework": "torch",
         "eager_tracing": True,
         # "horizon": 64,  # just for reporting some rewards
