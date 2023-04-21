@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis import strategies as st
 
-import gym_sts.spaces.old_constants as constants
+import gym_sts.spaces.constants.combat as combat_consts
 from gym_sts.spaces.observations.types.base import (
     Effect,
     Enemy,
@@ -12,7 +12,7 @@ from gym_sts.spaces.observations.types.base import (
 )
 
 
-@given(st.builds(Effect, id=st.sampled_from(constants.ALL_EFFECTS)))
+@given(st.builds(Effect, id=st.sampled_from(combat_consts.ALL_EFFECTS)))
 def test_effect_serde(effect: Effect):
     ser = effect.serialize()
     de = effect.deserialize(ser)
@@ -25,8 +25,8 @@ def test_effect_serde(effect: Effect):
 @given(
     st.builds(
         Enemy,
-        id=st.sampled_from(constants.ALL_MONSTER_TYPES),
-        intent=st.sampled_from(constants.ALL_INTENTS),
+        id=st.sampled_from(combat_consts.ALL_MONSTER_TYPES),
+        intent=st.sampled_from(combat_consts.ALL_INTENTS),
     )
 )
 def test_enemy_serde(enemy: Enemy):
@@ -51,7 +51,7 @@ def test_keys_serde(keys: Keys):
     assert keys == de
 
 
-@given(st.builds(Orb, id=st.sampled_from(constants.ALL_ORBS)))
+@given(st.builds(Orb, id=st.sampled_from(combat_consts.ALL_ORBS)))
 def test_orb_serde(orb: Orb):
     ser = orb.serialize()
     de = orb.deserialize(ser)

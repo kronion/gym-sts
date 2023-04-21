@@ -6,9 +6,9 @@ import numpy as np
 from gym.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import BaseModel, Field, root_validator, validator
 
+import gym_sts.spaces.constants.base as base_consts
 import gym_sts.spaces.constants.potions as potion_consts
 import gym_sts.spaces.constants.relics as relic_consts
-from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.constants.cards import CardCatalog, CardMetadata
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
@@ -25,7 +25,7 @@ class PersistentStateObs(PydanticComponent):
     deck: list[types.Card] = []
     keys: types.Keys = types.Keys()
     map: types.Map = types.Map()
-    screen_type: constants.ScreenType = constants.ScreenType.EMPTY
+    screen_type: base_consts.ScreenType = base_consts.ScreenType.EMPTY
 
     @root_validator(pre=True)
     def combine_map_inputs(cls, values):
@@ -62,9 +62,9 @@ class PersistentStateObs(PydanticComponent):
     def space():
         return Dict(
             {
-                "floor": MultiBinary(constants.LOG_NUM_FLOORS),
+                "floor": MultiBinary(base_consts.LOG_NUM_FLOORS),
                 "health": spaces.generate_health_space(),
-                "gold": MultiBinary(constants.LOG_MAX_GOLD),
+                "gold": MultiBinary(base_consts.LOG_MAX_GOLD),
                 "potions": Tuple(
                     [types.Potion.space()] * potion_consts.NUM_POTION_SLOTS
                 ),
@@ -73,16 +73,16 @@ class PersistentStateObs(PydanticComponent):
                     * relic_consts.NUM_RELICS
                 ),
                 "deck": spaces.generate_card_space(),
-                "keys": MultiBinary(constants.NUM_KEYS),
+                "keys": MultiBinary(base_consts.NUM_KEYS),
                 "map": types.Map.space(),
-                "screen_type": Discrete(len(constants.ScreenType.__members__)),
+                "screen_type": Discrete(len(base_consts.ScreenType.__members__)),
             }
         )
 
     def serialize(self) -> dict:
-        floor = utils.to_binary_array(self.floor, constants.LOG_NUM_FLOORS)
+        floor = utils.to_binary_array(self.floor, base_consts.LOG_NUM_FLOORS)
         health = types.Health(hp=self.hp, max_hp=self.max_hp).serialize()
-        gold = utils.to_binary_array(self.gold, constants.LOG_MAX_GOLD)
+        gold = utils.to_binary_array(self.gold, base_consts.LOG_MAX_GOLD)
 
         potions = [types.Potion.serialize_empty()] * potion_consts.NUM_POTION_SLOTS
 
@@ -111,7 +111,7 @@ class PersistentStateObs(PydanticComponent):
             "deck": deck,
             "keys": keys,
             "map": map,
-            "screen_type": list(constants.ScreenType.__members__).index(
+            "screen_type": list(base_consts.ScreenType.__members__).index(
                 self.screen_type.value
             ),
         }
@@ -182,8 +182,8 @@ class PersistentStateObs(PydanticComponent):
 
         keys = types.Keys.deserialize(data.keys)
         map = types.Map.deserialize(data.map)
-        screen_type_str = list(constants.ScreenType.__members__)[data.screen_type]
-        screen_type = constants.ScreenType(screen_type_str)
+        screen_type_str = list(base_consts.ScreenType.__members__)[data.screen_type]
+        screen_type = base_consts.ScreenType(screen_type_str)
 
         return cls(
             floor=floor,

@@ -8,7 +8,7 @@ from gym import spaces
 from pydantic import BaseModel
 
 from gym_sts.spaces import actions
-from gym_sts.spaces.old_constants import ScreenType
+from gym_sts.spaces.constants.base import ScreenType
 
 from . import components
 
