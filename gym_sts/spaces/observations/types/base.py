@@ -7,7 +7,9 @@ import numpy.typing as npt
 from gym.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field, validator
 
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.base as base_consts
+import gym_sts.spaces.constants.combat as combat_consts
+import gym_sts.spaces.constants.shop as shop_consts
 from gym_sts.spaces.observations import spaces, utils
 
 
@@ -15,14 +17,14 @@ BinaryArray = npt.NDArray[np.uint]
 
 
 class ShopMixin(BaseModel):
-    price: int = Field(..., ge=0, lt=2**constants.SHOP_LOG_MAX_PRICE)
+    price: int = Field(..., ge=0, lt=2**shop_consts.SHOP_LOG_MAX_PRICE)
 
     @staticmethod
     def serialize_empty_price():
-        return utils.to_binary_array(0, constants.SHOP_LOG_MAX_PRICE)
+        return utils.to_binary_array(0, shop_consts.SHOP_LOG_MAX_PRICE)
 
     def serialize_price(self):
-        return utils.to_binary_array(self.price, constants.SHOP_LOG_MAX_PRICE)
+        return utils.to_binary_array(self.price, shop_consts.SHOP_LOG_MAX_PRICE)
 
     @staticmethod
     def deserialize_price(price: BinaryArray) -> int:
@@ -46,9 +48,7 @@ class Keys(BaseModel):
 
 class Effect(BaseModel):
     id: str = "EMPTY"  # Placeholder should always be replaced
-    amount: int = Field(
-        ..., gt=-(2**constants.LOG_MAX_EFFECT), lt=2**constants.LOG_MAX_EFFECT
-    )
+    amount: int = Field(..., ge=-combat_consts.MAX_EFFECT, le=combat_consts.MAX_EFFECT)
 
     def serialize(self) -> dict:
         sign = 0
@@ -60,7 +60,7 @@ class Effect(BaseModel):
 
         return {
             "sign": sign,
-            "value": utils.to_binary_array(value, constants.LOG_MAX_EFFECT),
+            "value": utils.to_binary_array(value, combat_consts.LOG_MAX_EFFECT),
         }
 
     @staticmethod
@@ -68,10 +68,10 @@ class Effect(BaseModel):
         serialized = []
         effect_map = {effect.id: effect for effect in effects}
 
-        for effect_id in constants.ALL_EFFECTS:
+        for effect_id in combat_consts.ALL_EFFECTS:
             encoding = {
                 "sign": 0,
-                "value": utils.to_binary_array(0, constants.LOG_MAX_EFFECT),
+                "value": utils.to_binary_array(0, combat_consts.LOG_MAX_EFFECT),
             }
             if effect_id in effect_map:
                 effect = effect_map[effect_id]
@@ -105,25 +105,25 @@ class Orb(BaseModel):
 
     @staticmethod
     def serialize_empty() -> int:
-        return constants.ALL_ORBS.index("NONE")
+        return combat_consts.ALL_ORBS.index("NONE")
 
     def serialize(self) -> int:
-        return constants.ALL_ORBS.index(self.id)
+        return combat_consts.ALL_ORBS.index(self.id)
 
     @classmethod
     def deserialize(cls, orb_idx: int) -> Orb:
-        orb_id = constants.ALL_ORBS[orb_idx]
+        orb_id = combat_consts.ALL_ORBS[orb_idx]
         return cls(id=orb_id)
 
 
 class Health(BaseModel):
-    hp: int = Field(..., ge=0, lt=2**constants.LOG_MAX_HP)
-    max_hp: int = Field(..., ge=0, lt=2**constants.LOG_MAX_HP)
+    hp: int = Field(..., ge=0, le=base_consts.MAX_HP)
+    max_hp: int = Field(..., ge=0, le=base_consts.MAX_HP)
 
     def serialize(self) -> dict:
         return {
-            "hp": utils.to_binary_array(self.hp, constants.LOG_MAX_HP),
-            "max_hp": utils.to_binary_array(self.max_hp, constants.LOG_MAX_HP),
+            "hp": utils.to_binary_array(self.hp, base_consts.LOG_MAX_HP),
+            "max_hp": utils.to_binary_array(self.max_hp, base_consts.LOG_MAX_HP),
         }
 
     class SerializedState(BaseModel):
@@ -145,22 +145,24 @@ class Health(BaseModel):
 
 
 class Attack(BaseModel):
-    damage: int = Field(..., ge=0, lt=2**constants.LOG_MAX_ATTACK)
-    times: int = Field(..., ge=0, lt=2**constants.LOG_MAX_ATTACK_TIMES)
+    damage: int = Field(..., ge=0, le=combat_consts.MAX_ATTACK)
+    times: int = Field(..., ge=0, lt=combat_consts.MAX_ATTACK_TIMES)
 
     @staticmethod
     def space() -> Dict:
         return Dict(
             {
-                "damage": MultiBinary(constants.LOG_MAX_ATTACK),
-                "times": MultiBinary(constants.LOG_MAX_ATTACK_TIMES),
+                "damage": MultiBinary(combat_consts.LOG_MAX_ATTACK),
+                "times": MultiBinary(combat_consts.LOG_MAX_ATTACK_TIMES),
             }
         )
 
     def serialize(self):
         return {
-            "damage": utils.to_binary_array(self.damage, constants.LOG_MAX_ATTACK),
-            "times": utils.to_binary_array(self.times, constants.LOG_MAX_ATTACK_TIMES),
+            "damage": utils.to_binary_array(self.damage, combat_consts.LOG_MAX_ATTACK),
+            "times": utils.to_binary_array(
+                self.times, combat_consts.LOG_MAX_ATTACK_TIMES
+            ),
         }
 
     class SerializedState(BaseModel):
@@ -184,18 +186,16 @@ class Attack(BaseModel):
 class Enemy(BaseModel):
     id: str
     intent: str
-    current_hp: int = Field(..., ge=0, lt=2**constants.LOG_MAX_HP)
-    max_hp: int = Field(..., ge=0, lt=2**constants.LOG_MAX_HP)
-    block: int = Field(..., ge=0, lt=2**constants.LOG_MAX_BLOCK)
+    current_hp: int = Field(..., ge=0, le=base_consts.MAX_HP)
+    max_hp: int = Field(..., ge=0, le=base_consts.MAX_HP)
+    block: int = Field(..., ge=0, le=combat_consts.MAX_BLOCK)
     effects: list[Effect] = Field([], alias="powers")
 
     # These attribues may not be set if the player has runic dome
     damage: int = Field(
-        0, alias="move_adjusted_damage", ge=0, lt=2**constants.LOG_MAX_ATTACK
+        0, alias="move_adjusted_damage", ge=0, le=combat_consts.MAX_ATTACK
     )
-    times: int = Field(
-        0, alias="move_hits", ge=0, lt=2**constants.LOG_MAX_ATTACK_TIMES
-    )
+    times: int = Field(0, alias="move_hits", ge=0, le=combat_consts.MAX_ATTACK_TIMES)
 
     @validator("damage", pre=True)
     def must_be_nonnegative(cls, v: int) -> int:
@@ -205,10 +205,10 @@ class Enemy(BaseModel):
     def space() -> Dict:
         return Dict(
             {
-                "id": Discrete(constants.NUM_MONSTER_TYPES),
-                "intent": Discrete(constants.NUM_INTENTS),
+                "id": Discrete(combat_consts.NUM_MONSTER_TYPES),
+                "intent": Discrete(combat_consts.NUM_INTENTS),
                 "attack": Attack.space(),
-                "block": MultiBinary(constants.LOG_MAX_BLOCK),
+                "block": MultiBinary(combat_consts.LOG_MAX_BLOCK),
                 "effects": spaces.generate_effect_space(),
                 "health": spaces.generate_health_space(),
             }
@@ -220,7 +220,7 @@ class Enemy(BaseModel):
             "id": 0,
             "intent": 0,
             "attack": Attack(damage=0, times=0).serialize(),
-            "block": utils.to_binary_array(0, constants.LOG_MAX_BLOCK),
+            "block": utils.to_binary_array(0, combat_consts.LOG_MAX_BLOCK),
             "effects": Effect.serialize_all([]),
             "health": Health(hp=0, max_hp=0).serialize(),
         }
@@ -229,10 +229,10 @@ class Enemy(BaseModel):
 
     def serialize(self) -> dict:
         serialized = {
-            "id": constants.ALL_MONSTER_TYPES.index(self.id),
-            "intent": constants.ALL_INTENTS.index(self.intent),
+            "id": combat_consts.ALL_MONSTER_TYPES.index(self.id),
+            "intent": combat_consts.ALL_INTENTS.index(self.intent),
             "attack": Attack(damage=self.damage, times=self.times).serialize(),
-            "block": utils.to_binary_array(self.block, constants.LOG_MAX_BLOCK),
+            "block": utils.to_binary_array(self.block, combat_consts.LOG_MAX_BLOCK),
             "effects": Effect.serialize_all(self.effects),
             "health": Health(hp=self.current_hp, max_hp=self.max_hp).serialize(),
         }
@@ -259,15 +259,15 @@ class Enemy(BaseModel):
         for effect_idx, e in enumerate(data.effects):
             effect = Effect.deserialize(e)
             if effect.amount != 0:
-                effect.id = constants.ALL_EFFECTS[effect_idx]
+                effect.id = combat_consts.ALL_EFFECTS[effect_idx]
                 effects.append(effect)
 
         health = Health.deserialize(data.health)
         attack = Attack.deserialize(data.attack)
 
         return cls(
-            id=constants.ALL_MONSTER_TYPES[data.id],
-            intent=constants.ALL_INTENTS[data.intent],
+            id=combat_consts.ALL_MONSTER_TYPES[data.id],
+            intent=combat_consts.ALL_INTENTS[data.intent],
             block=utils.from_binary_array(data.block),
             powers=effects,
             current_hp=health.hp,

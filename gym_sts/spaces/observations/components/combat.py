@@ -7,7 +7,8 @@ import numpy.typing as npt
 from gym.spaces import Dict, MultiBinary, MultiDiscrete, Tuple
 from pydantic import BaseModel
 
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.base as base_consts
+import gym_sts.spaces.constants.combat as combat_consts
 from gym_sts.spaces.constants.cards import CardCatalog
 from gym_sts.spaces.observations import serializers, spaces, types, utils
 
@@ -54,7 +55,7 @@ class CombatObs(ObsComponent):
             self.exhaust.sort()
 
             self.enemies = [types.Enemy(**enemy) for enemy in combat_state["monsters"]]
-            assert len(self.enemies) <= constants.NUM_ENEMIES
+            assert len(self.enemies) <= combat_consts.MAX_NUM_ENEMIES
 
             player_state = combat_state["player"]
             self.block = player_state["block"]
@@ -62,7 +63,7 @@ class CombatObs(ObsComponent):
             self.effects = [types.Effect(**effect) for effect in player_state["powers"]]
             self.orbs = [types.Orb(**orb) for orb in player_state["orbs"]]
 
-            if state["screen_type"] == constants.ScreenType.HAND_SELECT:
+            if state["screen_type"] == base_consts.ScreenType.HAND_SELECT:
                 screen_state = state["screen_state"]
                 self.hand_selects = screen_state["selected"]
                 self.max_selects = screen_state["max_cards"]
@@ -72,13 +73,15 @@ class CombatObs(ObsComponent):
     def space() -> Dict:
         return Dict(
             {
-                "turn": MultiBinary(constants.LOG_MAX_TURN),
-                "hand": Tuple([types.HandCard.space()] * constants.HAND_SIZE),
-                "energy": MultiBinary(constants.LOG_MAX_ENERGY),
-                "orbs": MultiDiscrete([constants.NUM_ORBS] * constants.MAX_ORB_SLOTS),
-                "block": MultiBinary(constants.LOG_MAX_BLOCK),
+                "turn": MultiBinary(combat_consts.LOG_MAX_TURN),
+                "hand": Tuple([types.HandCard.space()] * combat_consts.MAX_HAND_SIZE),
+                "energy": MultiBinary(combat_consts.LOG_MAX_ENERGY),
+                "orbs": MultiDiscrete(
+                    [combat_consts.NUM_ORBS] * combat_consts.MAX_ORB_SLOTS
+                ),
+                "block": MultiBinary(combat_consts.LOG_MAX_BLOCK),
                 "effects": spaces.generate_effect_space(),
-                "enemies": Tuple([types.Enemy.space()] * constants.NUM_ENEMIES),
+                "enemies": Tuple([types.Enemy.space()] * combat_consts.MAX_NUM_ENEMIES),
                 "discard": spaces.generate_card_space(),
                 "draw": spaces.generate_card_space(),
                 "exhaust": spaces.generate_card_space(),
@@ -86,11 +89,11 @@ class CombatObs(ObsComponent):
         )
 
     def serialize(self) -> dict:
-        turn = utils.to_binary_array(self.turn, constants.LOG_MAX_TURN)
-        energy = utils.to_binary_array(self.energy, constants.LOG_MAX_ENERGY)
-        block = utils.to_binary_array(self.block, constants.LOG_MAX_BLOCK)
+        turn = utils.to_binary_array(self.turn, combat_consts.LOG_MAX_TURN)
+        energy = utils.to_binary_array(self.energy, combat_consts.LOG_MAX_ENERGY)
+        block = utils.to_binary_array(self.block, combat_consts.LOG_MAX_BLOCK)
 
-        hand = [types.HandCard.serialize_empty()] * constants.HAND_SIZE
+        hand = [types.HandCard.serialize_empty()] * combat_consts.MAX_HAND_SIZE
         for i, card in enumerate(self.hand):
             card_idx = card.serialize()
             hand[i] = card_idx
@@ -98,8 +101,7 @@ class CombatObs(ObsComponent):
         effects = types.Effect.serialize_all(self.effects)
         orbs = serializers.serialize_orbs(self.orbs)
 
-        enemies = [types.Enemy.serialize_empty()] * constants.NUM_ENEMIES
-
+        enemies = [types.Enemy.serialize_empty()] * combat_consts.MAX_NUM_ENEMIES
         for i, enemy in enumerate(self.enemies):
             enemies[i] = enemy.serialize()
 
@@ -154,7 +156,7 @@ class CombatObs(ObsComponent):
         for effect_idx, e in enumerate(data.effects):
             effect = types.Effect.deserialize(e)
             if effect.amount != 0:
-                effect.id = constants.ALL_EFFECTS[effect_idx]
+                effect.id = combat_consts.ALL_EFFECTS[effect_idx]
                 instance.effects.append(effect)
 
         instance.orbs = []

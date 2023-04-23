@@ -2,8 +2,8 @@ import time
 
 import numpy as np
 
+import gym_sts.spaces.constants.combat as combat_consts
 from gym_sts.spaces import actions
-from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.observations import utils
 
 
@@ -19,7 +19,7 @@ def test_enemy_attack_serialization(env):
     enemies = serialization["enemies"]
     assert len(enemies) > 0
     hexaghost = enemies[0]
-    expected_damage = utils.to_binary_array(0, constants.LOG_MAX_ATTACK)
+    expected_damage = utils.to_binary_array(0, combat_consts.LOG_MAX_ATTACK)
     assert np.array_equal(hexaghost["attack"]["damage"], expected_damage)
 
     # Next, demonstrate that damage and number of hits are correct
@@ -33,8 +33,8 @@ def test_enemy_attack_serialization(env):
     enemies = serialization["enemies"]
     assert len(enemies) > 0
     hexaghost = enemies[0]
-    expected_damage = utils.to_binary_array(1, constants.LOG_MAX_ATTACK)
-    expected_times = utils.to_binary_array(6, constants.LOG_MAX_ATTACK_TIMES)
+    expected_damage = utils.to_binary_array(1, combat_consts.LOG_MAX_ATTACK)
+    expected_times = utils.to_binary_array(6, combat_consts.LOG_MAX_ATTACK_TIMES)
     assert np.array_equal(hexaghost["attack"]["damage"], expected_damage)
     assert np.array_equal(hexaghost["attack"]["times"], expected_times)
 
@@ -64,7 +64,7 @@ def test_enemy_attack_serialization(env):
     assert len(enemies) > 0
     gremlin_nob = enemies[0]
     new_damage = gremlin_nob["attack"]["damage"]
-    expected_damage = utils.to_binary_array(damage + 2, constants.LOG_MAX_ATTACK)
+    expected_damage = utils.to_binary_array(damage + 2, combat_consts.LOG_MAX_ATTACK)
     assert np.array_equal(new_damage, expected_damage)
 
     # Runic Dome doesn't cause an error

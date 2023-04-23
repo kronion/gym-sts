@@ -1,7 +1,7 @@
 from hypothesis import given
 from hypothesis import strategies as st
 
-import gym_sts.spaces.old_constants as constants
+import gym_sts.spaces.constants.base as base_consts
 from gym_sts.spaces.observations import types
 
 from .test_potions import create_potion_base
@@ -52,7 +52,7 @@ def test_card_reward_serde(reward: types.CardReward):
     assert reward == de
 
 
-@given(st.builds(types.KeyReward, value=st.sampled_from(constants.ALL_KEYS)))
+@given(st.builds(types.KeyReward, value=st.sampled_from(base_consts.ALL_KEYS)))
 def test_key_reward_serde(reward: types.KeyReward):
     ser = reward.serialize()
     de = reward.deserialize(ser)

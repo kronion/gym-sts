@@ -1,8 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 
-from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.constants import cards as card_consts
+from gym_sts.spaces.constants import combat as combat_consts
 from gym_sts.spaces.observations import types
 
 
@@ -19,7 +19,7 @@ def serialize_cards(cards: list[types.Card]) -> npt.NDArray[np.uint]:
 
 
 def serialize_orbs(orbs: list[types.Orb]) -> npt.NDArray[np.uint]:
-    serialized = np.array([types.Orb.serialize_empty()] * constants.MAX_ORB_SLOTS)
+    serialized = np.array([types.Orb.serialize_empty()] * combat_consts.MAX_ORB_SLOTS)
 
     for i, orb in enumerate(orbs):
         serialized[i] = orb.serialize()

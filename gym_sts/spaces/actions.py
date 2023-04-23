@@ -4,7 +4,8 @@ from typing import Optional
 from gym.spaces import Discrete
 from pydantic import BaseModel, PrivateAttr
 
-from gym_sts.spaces import old_constants as constants
+import gym_sts.spaces.constants.base as base_consts
+from gym_sts.spaces.constants import combat as combat_consts
 from gym_sts.spaces.constants import potions as potion_consts
 
 
@@ -82,18 +83,18 @@ class Proceed(Action):
 def all_actions() -> list[Action]:
     actions = [EndTurn(), Return(), Proceed()]
 
-    for i in range(constants.NUM_CHOICES):
+    for i in range(base_consts.NUM_CHOICES):
         actions.append(Choose(choice_index=i))
 
     for i in range(potion_consts.NUM_POTION_SLOTS):
         actions.append(UsePotion(potion_index=i))
         actions.append(DiscardPotion(potion_index=i))
-        for j in range(constants.NUM_ENEMIES):
+        for j in range(combat_consts.MAX_NUM_ENEMIES):
             actions.append(UsePotion(potion_index=i, target_index=j))
 
-    for i in range(1, constants.HAND_SIZE + 1):
+    for i in range(1, combat_consts.MAX_HAND_SIZE + 1):
         actions.append(PlayCard(card_position=i))
-        for j in range(constants.NUM_ENEMIES):
+        for j in range(combat_consts.MAX_NUM_ENEMIES):
             actions.append(PlayCard(card_position=i, target_index=j))
 
     for i, action in enumerate(actions):

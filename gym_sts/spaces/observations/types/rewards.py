@@ -6,8 +6,8 @@ from typing import Union
 from gym.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field
 
+import gym_sts.spaces.constants.base as base_consts
 import gym_sts.spaces.constants.rewards as reward_consts
-from gym_sts.spaces import old_constants as constants
 from gym_sts.spaces.constants.relics import RelicCatalog
 from gym_sts.spaces.observations import utils
 
@@ -159,7 +159,7 @@ class KeyReward(Reward):
     value: str
 
     def serialize(self) -> dict:
-        key_idx = constants.ALL_KEYS.index(self.value)
+        key_idx = base_consts.ALL_KEYS.index(self.value)
         return {
             "type": reward_consts.RewardType.KEY,
             "value": utils.to_binary_array(
@@ -173,6 +173,6 @@ class KeyReward(Reward):
             data = cls.SerializedState(**data)
 
         key_idx = utils.from_binary_array(data.value)
-        key = constants.ALL_KEYS[key_idx]
+        key = base_consts.ALL_KEYS[key_idx]
 
         return cls(value=key)
