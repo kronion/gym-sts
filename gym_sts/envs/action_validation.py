@@ -98,13 +98,6 @@ def validate_play(action: actions.PlayCard, observation: Observation) -> bool:
         if target_index >= len(enemies):
             return False
 
-        # We confirm the card actually takes a target. If it doesn't, the target
-        # selection is ignored anyway.
-        if card.has_target:
-            enemy = enemies[target_index]
-            if enemy.is_gone:
-                return False
-
     return card.is_playable
 
 

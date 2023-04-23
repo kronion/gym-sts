@@ -188,7 +188,6 @@ class Enemy(BaseModel):
     max_hp: int = Field(..., ge=0, lt=2**constants.LOG_MAX_HP)
     block: int = Field(..., ge=0, lt=2**constants.LOG_MAX_BLOCK)
     effects: list[Effect] = Field([], alias="powers")
-    is_gone: bool = False  # TODO serialize?
 
     # These attribues may not be set if the player has runic dome
     damage: int = Field(
