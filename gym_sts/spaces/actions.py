@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Optional
 
 from gym.spaces import Discrete
@@ -8,9 +9,10 @@ from gym_sts.spaces.constants import combat as combat_consts
 from gym_sts.spaces.constants import potions as potion_consts
 
 
-class Action(BaseModel):
+class Action(BaseModel, ABC):
     _id: int = PrivateAttr(-1)
 
+    @abstractmethod
     def to_command(self) -> str:
         raise RuntimeError("not implemented")
 
