@@ -3,7 +3,6 @@ import os
 
 import fancyflags as ff
 import ray
-import torch
 from absl import app, logging
 from gym import spaces
 from ray import tune
@@ -16,9 +15,6 @@ from ray.train.rl import RLTrainer
 from gym_sts.envs import base, single_combat
 from gym_sts.rl import action_masking
 from gym_sts.rl.metrics import StSCustomMetricCallbacks
-
-
-torch.set_num_threads(4)
 
 
 def check_rllib_bug(space: spaces.Space):
