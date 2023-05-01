@@ -5,8 +5,6 @@ from ray.rllib.env import BaseEnv
 from ray.rllib.evaluation import Episode, RolloutWorker
 from ray.rllib.policy import Policy
 
-from gym_sts.spaces.observations import Observation
-
 
 class StSCustomMetricCallbacks(DefaultCallbacks):
     def on_episode_end(
@@ -19,7 +17,10 @@ class StSCustomMetricCallbacks(DefaultCallbacks):
         env_index: int,
         **kwargs
     ):
-        obs = Observation.deserialize(episode.last_raw_obs_for())
+        subenvs = base_env.get_sub_environments()
+        assert len(subenvs) == 1
+
+        obs = subenvs[0].observe()
 
         max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
         enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)

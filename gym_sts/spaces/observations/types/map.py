@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
+from gymnasium.spaces import Dict, Discrete, MultiBinary, MultiDiscrete
 from pydantic import BaseModel
 
 import gym_sts.spaces.constants.map as map_consts

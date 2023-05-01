@@ -4,7 +4,7 @@ from typing import Union
 
 import numpy as np
 import numpy.typing as npt
-from gym.spaces import Dict, Discrete, MultiBinary
+from gymnasium.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field, validator
 
 from gym_sts.spaces import old_constants as constants

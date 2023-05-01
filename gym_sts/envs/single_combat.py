@@ -21,8 +21,8 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
         self.cards = cards
         self.add_relics = add_relics
 
-    def reset(self, *args, return_info: bool = False, **kwargs):
-        super().reset(*args, return_info=return_info, **kwargs)  # type: ignore[misc]
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)  # type: ignore[misc]
 
         # prng should have already been set in super().reset
         assert self.prng is not None
@@ -41,22 +41,19 @@ class SingleCombatSTSEnv(SlayTheSpireGymEnv):
         assert obs.in_combat
         self.observation_cache.append(obs)
 
-        if return_info:
-            info = {
-                "seed": self.seed,
-                "sts_seed": self.sts_seed,
-                "rng_state": self.prng.getstate(),
-                "observation": obs,
-            }
-            return obs.serialize(), info
-        else:
-            return obs.serialize()
+        info = {
+            "seed": self.seed,
+            "sts_seed": self.sts_seed,
+            "rng_state": self.prng.getstate(),
+            "observation": obs,
+        }
+        return obs.serialize(), info
 
     def step(self, action_id: int):
-        ser, reward, should_reset, info = super().step(action_id)
+        ser, reward, should_reset, truncated, info = super().step(action_id)
 
         # When you test out a new combat, make sure this condition works
         if not info["observation"].in_combat:
             should_reset = True
 
-        return ser, reward, should_reset, info
+        return ser, reward, should_reset, truncated, info

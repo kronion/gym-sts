@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Union
 
-from gym.spaces import Dict, Discrete, MultiBinary
+from gymnasium.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field
 
 import gym_sts.spaces.constants.rewards as reward_consts

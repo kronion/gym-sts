@@ -9,7 +9,6 @@ class ResetParams(BaseModel):
     """
 
     seed: Optional[int]
-    return_info: bool
     sts_seed: Optional[str]
     rng_state: Optional[tuple]
     reboot: bool = False

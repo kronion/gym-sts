@@ -10,7 +10,7 @@ import time
 from typing import Callable, Optional, Tuple, Union
 
 import docker
-import gym
+import gymnasium as gym
 from docker.models.containers import Container
 
 from gym_sts import constants, exceptions
@@ -283,8 +283,8 @@ class SlayTheSpireGymEnv(gym.Env):
 
     def reset(
         self,
+        *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Union[dict, Tuple[dict, dict]]:
         """
@@ -307,7 +307,7 @@ class SlayTheSpireGymEnv(gym.Env):
         """
 
         options = options or {}
-        params = ResetParams(seed=seed, return_info=return_info, **options)
+        params = ResetParams(seed=seed, **options)
 
         print("env.reset, " + repr(params))
 
@@ -367,16 +367,13 @@ class SlayTheSpireGymEnv(gym.Env):
         # Send game's starting state to state logger
         self.state_logger.log(None, obs)
 
-        if params.return_info:
-            info = {
-                "seed": self.seed,
-                "sts_seed": self.sts_seed,
-                "rng_state": self.prng.getstate(),
-                "observation": obs,
-            }
-            return obs.serialize(), info
-        else:
-            return obs.serialize()
+        info = {
+            "seed": self.seed,
+            "sts_seed": self.sts_seed,
+            "rng_state": self.prng.getstate(),
+            "observation": obs,
+        }
+        return obs.serialize(), info
 
     def start(self) -> None:
         if self.headless:
@@ -391,7 +388,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self._ready()
         self.communicator.render(self.animate)
 
-    def step(self, action_id: int) -> Tuple[dict, float, bool, dict]:
+    def step(self, action_id: int) -> Tuple[dict, float, bool, bool, dict]:
         prev_obs = self.observation_cache.get()
         assert prev_obs is not None  # should have been set by reset()
 
@@ -417,7 +414,7 @@ class SlayTheSpireGymEnv(gym.Env):
                 "had_error": obs.has_error,
                 "reboot_error": e,
             }
-            return obs.serialize(), 0.0, True, info
+            return obs.serialize(), 0.0, True, False, info
 
         if obs.has_error == is_valid:
             # indicates a mismatch in our action validity checking
@@ -458,7 +455,7 @@ class SlayTheSpireGymEnv(gym.Env):
             "had_error": had_error,
         }
 
-        return obs.serialize(), reward, obs.game_over, info
+        return obs.serialize(), reward, obs.game_over, False, info
 
     def screenshot(self, filename: str) -> None:
         """

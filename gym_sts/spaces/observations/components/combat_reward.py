@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from gym.spaces import Tuple
+from gymnasium.spaces import Tuple
 
 import gym_sts.spaces.constants.rewards as reward_consts
 from gym_sts.spaces.observations import types

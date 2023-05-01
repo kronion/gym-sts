@@ -4,10 +4,10 @@ import os
 import fancyflags as ff
 import ray
 from absl import app, logging
-from gym import spaces
+from gymnasium import spaces
 from ray import tune
 from ray.air import config
-from ray.air.callbacks.wandb import WandbLoggerCallback
+from ray.air.integrations.wandb import WandbLoggerCallback
 from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 from ray.train.rl import RLTrainer
@@ -152,7 +152,7 @@ def main(_):
         "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
         "callbacks": StSCustomMetricCallbacks,
-        "framework": "torch",
+        "framework": "tf2",
         "eager_tracing": True,
         # "horizon": 64,  # just for reporting some rewards
         # "soft_horizon": True,
