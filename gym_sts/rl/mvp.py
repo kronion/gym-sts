@@ -93,6 +93,8 @@ SCALING = ff.DEFINE_dict(
     "scaling",
     num_workers=ff.Integer(0),
     use_gpu=ff.Boolean(False),
+    trainer_resources=dict(CPU=ff.String(1), GPU=ff.String(0)),
+    resources_per_worker=dict(CPU=ff.String(1), GPU=ff.String(0)),
 )
 
 SINGLE_COMBAT = ff.DEFINE_dict(
