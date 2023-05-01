@@ -74,7 +74,7 @@ WANDB = ff.DEFINE_dict(
     api_key_file=ff.String(None),
     api_key=ff.String(None),
     log_config=ff.Boolean(False),
-    save_checkpoints=ff.Boolean(False),
+    upload_checkpoints=ff.Boolean(False),
 )
 
 RL = ff.DEFINE_dict(
