@@ -17,6 +17,7 @@ wandb = "^0.13.4"
 torch = "^1.13.0"
 dm-tree = "^0.1.7"
 scikit-image = "^0.20.0"
+tensorflow = "^2.12.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.4.0"
