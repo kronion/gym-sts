@@ -87,6 +87,7 @@ RL = ff.DEFINE_dict(
         fcnet_hiddens=ff.Sequence([256, 256, 256, 256]),
         fcnet_activation=ff.String("relu"),
     ),
+    entropy_coeff=ff.Float(0.0),
 )
 
 SCALING = ff.DEFINE_dict(
