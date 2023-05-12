@@ -196,7 +196,7 @@ def main(_):
 
     restore_path = tune_config.get("restore")
     if restore_path:
-        tuner = tune.Tuner.restore(restore_path)
+        tuner = tune.Tuner.restore(restore_path, trainable=trainer)
 
     tuner.fit()
 
