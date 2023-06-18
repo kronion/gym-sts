@@ -757,4 +757,5 @@ NUM_RELICS = len(RelicCatalog)
 LOG_NUM_RELICS = math.ceil(math.log(NUM_RELICS, 2))
 
 # Counter values never need to be greater than 10
+MAX_COUNTER = 15
 LOG_MAX_COUNTER = 4

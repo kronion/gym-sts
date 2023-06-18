@@ -80,7 +80,8 @@ class Relic(RelicBase):
         return {
             "id": super().serialize(discrete=True),
             "counter": utils.to_binary_array(
-                self.counter, relic_consts.LOG_MAX_COUNTER
+                min(self.counter, relic_consts.MAX_COUNTER),
+                relic_consts.LOG_MAX_COUNTER,
             ),
         }
 
