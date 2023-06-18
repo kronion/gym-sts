@@ -152,18 +152,16 @@ def main(_):
     ppo_config = {
         "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
-        "callbacks": StSCustomMetricCallbacks,
         "framework": "tf2",
         "eager_tracing": True,
         # "horizon": 64,  # just for reporting some rewards
         # "soft_horizon": True,
         # "no_done_at_end": True,
     }
-    ppo_config.update(rl_config)
+    if SINGLE_COMBAT.value["use"]:
+        ppo_config["callbacks"] = StSCustomMetricCallbacks
 
-    # algorithm = ppo.PPO(ppo_config)
-    # algorithm.restore("/home/spdskatr/ray_results/potato/artifacts/checkpoint_sts-rl:v12")
-    # raise Exception("hi")
+    ppo_config.update(rl_config)
 
     trainer = RLTrainer(
         scaling_config=config.ScalingConfig(**SCALING.value),
