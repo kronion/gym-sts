@@ -47,6 +47,9 @@ TUNE = ff.DEFINE_dict(
     "tune",
     run=dict(
         name=ff.String("sts-rl", "Name of the ray experiment"),
+        failure_config=dict(
+            max_failures=ff.Integer(0)  # Set to -1 to enable infinite recovery retries
+        ),
         local_dir=ff.String(None),  # default is ~/ray_results/
         verbose=ff.Integer(3),
     ),
