@@ -47,11 +47,11 @@ TUNE = ff.DEFINE_dict(
     "tune",
     run=dict(
         name=ff.String("sts-rl", "Name of the ray experiment"),
-        failure_config=dict(
-            max_failures=ff.Integer(0)  # Set to -1 to enable infinite recovery retries
-        ),
         local_dir=ff.String(None),  # default is ~/ray_results/
         verbose=ff.Integer(3),
+    ),
+    failure_config=dict(
+        max_failures=ff.Integer(0)  # Set to -1 to enable infinite recovery retries
     ),
     checkpoint_config=dict(
         checkpoint_frequency=ff.Integer(20),
@@ -183,10 +183,12 @@ def main(_):
     tune_config = TUNE.value
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
+    failure_config = config.FailureConfig(**tune_config["failure_config"])
     run_config = config.RunConfig(
         callbacks=callbacks,
         checkpoint_config=checkpoint_config,
         sync_config=sync_config,
+        failure_config=failure_config,
         **tune_config["run"],
     )
 
