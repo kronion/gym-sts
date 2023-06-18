@@ -2,6 +2,7 @@
 
 from gym_sts.envs.base import SlayTheSpireGymEnv
 
+
 SlayTheSpireGymEnv.build_image()
 env = SlayTheSpireGymEnv("lib", "mods", "out", headless=True)
 obs = env.reset()

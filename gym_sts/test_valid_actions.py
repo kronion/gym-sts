@@ -37,7 +37,9 @@ def main():
     if args.build_image:
         SlayTheSpireGymEnv.build_image()
     env = SlayTheSpireGymEnv(
-        args.lib_dir, args.mods_dir, args.out_dir,
+        args.lib_dir,
+        args.mods_dir,
+        args.out_dir,
         headless=args.headless,
         animate=args.render,
         reboot_on_error=True,
@@ -104,7 +106,7 @@ def main():
 
     if args.dump_states:
         states_file = os.path.join(args.out_dir, "states.pkl")
-        with open(states_file, 'wb') as f:
+        with open(states_file, "wb") as f:
             column_major = tree.map_structure(lambda *xs: np.array(xs), *states)
             pickle.dump(column_major, f)
 
