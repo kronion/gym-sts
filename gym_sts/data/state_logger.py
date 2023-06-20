@@ -1,3 +1,5 @@
+import datetime
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -27,13 +29,13 @@ class StateLogger:
             self.flush_actions()
 
     def flush_actions(self):
-        # Uncomment next time we want to collect more data
-        # now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        # with open(self.logdir / f"states_{now}.json", "w") as f:
-        #    f.write(json.dumps(self.unlogged_actions))
+        now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        outpath = self.logdir / f"states_{now}.json"
+        with open(outpath, "w") as f:
+            f.write(json.dumps(self.unlogged_actions))
 
         self.unlogged_actions = []
 
         # TODO: Implement writing to WandB
 
-        print("Actions not being logged.")
+        print("Actions logged to", outpath)

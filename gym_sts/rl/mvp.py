@@ -41,6 +41,7 @@ ENV = ff.DEFINE_dict(
     build_image=ff.Boolean(False),
     reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
     reboot_on_error=ff.Boolean(False),
+    log_states=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
@@ -138,6 +139,7 @@ def main(_):
         "reboot_frequency",
         "reboot_on_error",
         "ascension",
+        "log_states",
     ]:
         env_config[key] = ENV.value[key]
 

@@ -41,6 +41,7 @@ class SlayTheSpireGymEnv(gym.Env):
         reboot_on_error: bool = False,
         value_fn: Callable[[Observation], float] = full_game_obs_value,
         ascension: int = 0,
+        log_states: bool = False,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -110,6 +111,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self.ascension = ascension
 
         # Create states directory
+        self.log_states = log_states
         self.states_dir = self.output_dir / "states"
         self.states_dir.mkdir(exist_ok=True)
         self.state_logger: StateLogger = StateLogger(self.states_dir)
@@ -365,7 +367,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_cache.append(obs)
 
         # Send game's starting state to state logger
-        self.state_logger.log(None, obs)
+        if self.log_states:
+            self.state_logger.log(None, obs)
 
         info = {
             "seed": self.seed,
@@ -432,7 +435,8 @@ class SlayTheSpireGymEnv(gym.Env):
             obs = prev_obs
         else:
             # Send observation to state logger
-            self.state_logger.log(action, obs)
+            if self.log_states:
+                self.state_logger.log(action, obs)
 
             success = False
             for _ in range(10):
