@@ -183,6 +183,9 @@ def main(_):
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value
+    # We're doing a lot of direct key-based access of values in these dict flags.
+    # The fancyflags docs consider this an antipattern, see:
+    #   https://github.com/deepmind/fancyflags#tips.
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
     failure_config = config.FailureConfig(**tune_config["failure_config"])

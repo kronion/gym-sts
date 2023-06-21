@@ -2,8 +2,6 @@ import random
 import typing as tp
 from typing import Optional
 
-import numpy as np
-
 from gym_sts.spaces.observations import Observation
 
 
@@ -91,7 +89,7 @@ def single_combat_value(obs: Observation) -> float:
     p_damage = (max_hp - enemy_hp) / max_hp
     p_hp = self_hp / self_max_hp
 
-    return float(np.prod([p_hp, p_damage]) + p_damage * 0.01)
+    return (p_hp + 0.01) * p_damage
 
 
 def full_game_obs_value(obs: Observation) -> float:
