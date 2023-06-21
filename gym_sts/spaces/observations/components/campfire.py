@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from gym.spaces import Dict, Discrete, Space, Tuple
+from gymnasium.spaces import Dict, Discrete, Space, Tuple
 from pydantic import BaseModel, Field
 
 import gym_sts.spaces.constants.campfire as campfire_consts

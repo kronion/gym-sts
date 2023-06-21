@@ -30,11 +30,12 @@ class StateLogger:
 
     def flush_actions(self):
         now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        with open(self.logdir / f"states_{now}.json", "w") as f:
+        outpath = self.logdir / f"states_{now}.json"
+        with open(outpath, "w") as f:
             f.write(json.dumps(self.unlogged_actions))
 
         self.unlogged_actions = []
 
         # TODO: Implement writing to WandB
 
-        print("Actions flushed.")
+        print("Actions logged to", outpath)

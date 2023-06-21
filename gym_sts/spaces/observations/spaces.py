@@ -1,4 +1,4 @@
-from gym.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
+from gymnasium.spaces import Dict, Discrete, MultiBinary, MultiDiscrete, Tuple
 
 import gym_sts.spaces.constants.base as base_consts
 import gym_sts.spaces.constants.cards as card_consts

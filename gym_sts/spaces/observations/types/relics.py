@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary
+from gymnasium.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, validator
 
 import gym_sts.spaces.constants.relics as relic_consts
@@ -80,7 +80,8 @@ class Relic(RelicBase):
         return {
             "id": super().serialize(discrete=True),
             "counter": utils.to_binary_array(
-                self.counter, relic_consts.LOG_MAX_COUNTER
+                min(self.counter, relic_consts.MAX_COUNTER),
+                relic_consts.LOG_MAX_COUNTER,
             ),
         }
 

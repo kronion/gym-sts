@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary, Tuple
+from gymnasium.spaces import Dict, Discrete, MultiBinary, Tuple
 from pydantic import BaseModel, Field, root_validator, validator
 
 import gym_sts.spaces.constants.base as base_consts

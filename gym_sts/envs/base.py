@@ -10,7 +10,7 @@ import time
 from typing import Callable, Optional, Tuple, Union
 
 import docker
-import gym
+import gymnasium as gym
 from docker.models.containers import Container
 
 from gym_sts import constants, exceptions
@@ -21,7 +21,7 @@ from gym_sts.spaces.observations import OBSERVATION_SPACE, Observation
 
 from .action_validation import validate
 from .types import ResetParams
-from .utils import Cache, SeedHelpers, obs_value
+from .utils import Cache, SeedHelpers, full_game_obs_value
 
 
 CONTAINER_OUTDIR = "/game/out"
@@ -39,8 +39,9 @@ class SlayTheSpireGymEnv(gym.Env):
         animate: bool = True,
         reboot_frequency: Optional[int] = None,
         reboot_on_error: bool = False,
-        value_fn: Callable[[Observation], float] = obs_value,
+        value_fn: Callable[[Observation], float] = full_game_obs_value,
         ascension: int = 0,
+        log_states: bool = False,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -110,6 +111,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self.ascension = ascension
 
         # Create states directory
+        self.log_states = log_states
         self.states_dir = self.output_dir / "states"
         self.states_dir.mkdir(exist_ok=True)
         self.state_logger: StateLogger = StateLogger(self.states_dir)
@@ -283,8 +285,8 @@ class SlayTheSpireGymEnv(gym.Env):
 
     def reset(
         self,
+        *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Union[dict, Tuple[dict, dict]]:
         """
@@ -307,7 +309,7 @@ class SlayTheSpireGymEnv(gym.Env):
         """
 
         options = options or {}
-        params = ResetParams(seed=seed, return_info=return_info, **options)
+        params = ResetParams(seed=seed, **options)
 
         print("env.reset, " + repr(params))
 
@@ -365,18 +367,16 @@ class SlayTheSpireGymEnv(gym.Env):
         self.observation_cache.append(obs)
 
         # Send game's starting state to state logger
-        self.state_logger.log(None, obs)
+        if self.log_states:
+            self.state_logger.log(None, obs)
 
-        if params.return_info:
-            info = {
-                "seed": self.seed,
-                "sts_seed": self.sts_seed,
-                "rng_state": self.prng.getstate(),
-                "observation": obs,
-            }
-            return obs.serialize(), info
-        else:
-            return obs.serialize()
+        info = {
+            "seed": self.seed,
+            "sts_seed": self.sts_seed,
+            "rng_state": self.prng.getstate(),
+            "observation": obs,
+        }
+        return obs.serialize(), info
 
     def start(self) -> None:
         if self.headless:
@@ -391,7 +391,7 @@ class SlayTheSpireGymEnv(gym.Env):
         self._ready()
         self.communicator.render(self.animate)
 
-    def step(self, action_id: int) -> Tuple[dict, float, bool, dict]:
+    def step(self, action_id: int) -> Tuple[dict, float, bool, bool, dict]:
         prev_obs = self.observation_cache.get()
         assert prev_obs is not None  # should have been set by reset()
 
@@ -417,7 +417,7 @@ class SlayTheSpireGymEnv(gym.Env):
                 "had_error": obs.has_error,
                 "reboot_error": e,
             }
-            return obs.serialize(), 0.0, True, info
+            return obs.serialize(), 0.0, True, False, info
 
         if obs.has_error == is_valid:
             # indicates a mismatch in our action validity checking
@@ -435,7 +435,8 @@ class SlayTheSpireGymEnv(gym.Env):
             obs = prev_obs
         else:
             # Send observation to state logger
-            self.state_logger.log(action, obs)
+            if self.log_states:
+                self.state_logger.log(action, obs)
 
             success = False
             for _ in range(10):
@@ -447,6 +448,7 @@ class SlayTheSpireGymEnv(gym.Env):
                     success = True
                     break
             if not success:
+                print(obs.state)
                 raise exceptions.StSError("No valid actions.")
 
             reward = self.value_fn(obs) - self.value_fn(prev_obs)
@@ -457,7 +459,7 @@ class SlayTheSpireGymEnv(gym.Env):
             "had_error": had_error,
         }
 
-        return obs.serialize(), reward, obs.game_over, info
+        return obs.serialize(), reward, obs.game_over, False, info
 
     def screenshot(self, filename: str) -> None:
         """

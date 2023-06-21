@@ -36,9 +36,14 @@ class Receiver:
         for _ in range(self.num_steps):
             message = self.fh.readline()
             if len(message) > 0:
-                state = json.loads(message)
-                if state["ready_for_command"]:
-                    return state
+                try:
+                    state = json.loads(message)
+                    if state["ready_for_command"]:
+                        return state
+                except json.decoder.JSONDecodeError:
+                    print(
+                        "W: Message not in valid JSON, retrying. Contents: " + message
+                    )
 
             time.sleep(self.sleep_time)
 

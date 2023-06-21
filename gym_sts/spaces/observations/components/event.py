@@ -1,5 +1,5 @@
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary
+from gymnasium.spaces import Dict, Discrete, MultiBinary
 
 import gym_sts.spaces.constants.events as event_consts
 from gym_sts.spaces.data import EVENT_DATA

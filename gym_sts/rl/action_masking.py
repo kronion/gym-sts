@@ -1,22 +1,24 @@
 import typing as tp
 
-import torch
+import tensorflow as tf
 from ray.rllib.models import ModelCatalog
-from ray.rllib.models.torch import fcnet
+
+# from ray.rllib.models.tf import tf_modelv2
+from ray.rllib.models.tf import fcnet
 
 
 class MaskedModel(fcnet.FullyConnectedNetwork):
     def forward(
         self,
-        input_dict: dict[str, torch.Tensor],
-        state: list[torch.Tensor],
-        seq_lens: torch.Tensor,
-    ) -> tp.Tuple[torch.Tensor, list[torch.Tensor]]:
+        input_dict: dict[str, tf.Tensor],
+        state: list[tf.Tensor],
+        seq_lens: tf.Tensor,
+    ) -> tp.Tuple[tf.Tensor, list[tf.Tensor]]:
         logits, state = super().forward(input_dict, state, seq_lens)
 
         mask = input_dict["obs"]["valid_action_mask"]
-        mask = torch.Tensor(mask).to(torch.bool)
-        logits = torch.where(mask, logits, torch.finfo().min)
+        mask = tf.cast(mask, tf.bool)
+        logits = tf.where(mask, logits, tf.float32.min)
 
         return logits, state
 

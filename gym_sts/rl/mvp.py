@@ -4,16 +4,17 @@ import os
 import fancyflags as ff
 import ray
 from absl import app, logging
-from gym import spaces
+from gymnasium import spaces
 from ray import tune
 from ray.air import config
-from ray.air.callbacks.wandb import WandbLoggerCallback
+from ray.air.integrations.wandb import WandbLoggerCallback
 from ray.rllib.algorithms import ppo
 from ray.rllib.models import preprocessors
 from ray.train.rl import RLTrainer
 
 from gym_sts.envs import base, single_combat
 from gym_sts.rl import action_masking
+from gym_sts.rl.metrics import StSCustomMetricCallbacks
 
 
 def check_rllib_bug(space: spaces.Space):
@@ -40,6 +41,7 @@ ENV = ff.DEFINE_dict(
     build_image=ff.Boolean(False),
     reboot_frequency=ff.Integer(50, "Reboot game every n resets."),
     reboot_on_error=ff.Boolean(False),
+    log_states=ff.Boolean(False),
 )
 
 TUNE = ff.DEFINE_dict(
@@ -48,6 +50,9 @@ TUNE = ff.DEFINE_dict(
         name=ff.String("sts-rl", "Name of the ray experiment"),
         local_dir=ff.String(None),  # default is ~/ray_results/
         verbose=ff.Integer(3),
+    ),
+    failure_config=dict(
+        max_failures=ff.Integer(0)  # Set to -1 to enable infinite recovery retries
     ),
     checkpoint_config=dict(
         checkpoint_frequency=ff.Integer(20),
@@ -73,25 +78,36 @@ WANDB = ff.DEFINE_dict(
     api_key_file=ff.String(None),
     api_key=ff.String(None),
     log_config=ff.Boolean(False),
-    save_checkpoints=ff.Boolean(False),
+    upload_checkpoints=ff.Boolean(False),
 )
 
 RL = ff.DEFINE_dict(
     "rl",
     rollout_fragment_length=ff.Integer(32),
     train_batch_size=ff.Integer(1024),
+    num_workers=ff.Integer(0),
+    model=dict(
+        custom_model=ff.String("masked"),
+        fcnet_hiddens=ff.Sequence([256, 256, 256, 256]),
+        fcnet_activation=ff.String("relu"),
+    ),
+    entropy_coeff=ff.Float(0.0),
 )
 
 SCALING = ff.DEFINE_dict(
     "scaling",
     num_workers=ff.Integer(0),
     use_gpu=ff.Boolean(False),
+    trainer_resources=dict(CPU=ff.Integer(1), GPU=ff.Integer(0)),
+    resources_per_worker=dict(CPU=ff.Integer(1), GPU=ff.Integer(0)),
 )
 
 SINGLE_COMBAT = ff.DEFINE_dict(
     "single_combat",
     use=ff.Boolean(False),
-    enemy=ff.String("3_Sentries"),
+    enemies=ff.StringList(["3_Sentries"]),
+    cards=ff.StringList(["Strike_B"] * 4 + ["Defend_B"] * 4 + ["Zap"] + ["Dualcast"]),
+    add_relics=ff.StringList([]),
 )
 
 
@@ -123,11 +139,14 @@ def main(_):
         "reboot_frequency",
         "reboot_on_error",
         "ascension",
+        "log_states",
     ]:
         env_config[key] = ENV.value[key]
 
     if SINGLE_COMBAT.value["use"]:
-        env_config["enemy"] = SINGLE_COMBAT.value["enemy"]
+        env_config["enemies"] = SINGLE_COMBAT.value["enemies"]
+        env_config["cards"] = SINGLE_COMBAT.value["cards"]
+        env_config["add_relics"] = SINGLE_COMBAT.value["add_relics"]
 
     if ENV.value["build_image"]:
         logging.info("build_image")
@@ -138,14 +157,15 @@ def main(_):
     ppo_config = {
         "env": SingleCombatEnv if SINGLE_COMBAT.value["use"] else Env,
         "env_config": env_config,
-        "framework": "torch",
+        "framework": "tf2",
         "eager_tracing": True,
-        "model": {
-            "custom_model": "masked",
-            "fcnet_hiddens": [256, 256],
-            "fcnet_activation": "relu",
-        },
+        # "horizon": 64,  # just for reporting some rewards
+        # "soft_horizon": True,
+        # "no_done_at_end": True,
     }
+    if SINGLE_COMBAT.value["use"]:
+        ppo_config["callbacks"] = StSCustomMetricCallbacks
+
     ppo_config.update(rl_config)
 
     trainer = RLTrainer(
@@ -163,12 +183,17 @@ def main(_):
         callbacks.append(wandb_callback)
 
     tune_config = TUNE.value
+    # We're doing a lot of direct key-based access of values in these dict flags.
+    # The fancyflags docs consider this an antipattern, see:
+    #   https://github.com/deepmind/fancyflags#tips.
     sync_config = tune.SyncConfig(**tune_config["sync_config"])
     checkpoint_config = config.CheckpointConfig(**tune_config["checkpoint_config"])
+    failure_config = config.FailureConfig(**tune_config["failure_config"])
     run_config = config.RunConfig(
         callbacks=callbacks,
         checkpoint_config=checkpoint_config,
         sync_config=sync_config,
+        failure_config=failure_config,
         **tune_config["run"],
     )
 
@@ -179,7 +204,7 @@ def main(_):
 
     restore_path = tune_config.get("restore")
     if restore_path:
-        tuner = tune.Tuner.restore(restore_path)
+        tuner = tune.Tuner.restore(restore_path, trainable=trainer, resume_errored=True)
 
     tuner.fit()
 

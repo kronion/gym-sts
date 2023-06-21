@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from gym.spaces import Discrete
+from gymnasium.spaces import Discrete
 from pydantic import BaseModel, PrivateAttr
 
 import gym_sts.spaces.constants.base as base_consts

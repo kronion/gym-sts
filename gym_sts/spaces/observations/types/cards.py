@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal, Union
 
 import numpy as np
-from gym.spaces import Dict, Discrete, MultiBinary
+from gymnasium.spaces import Dict, Discrete, MultiBinary
 from pydantic import BaseModel, Field, NonNegativeInt, validator
 
 import gym_sts.spaces.constants.cards as card_consts

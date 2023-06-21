@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from gym.spaces import Dict, Discrete, MultiBinary, Space, Tuple
+from gymnasium.spaces import Dict, Discrete, MultiBinary, Space, Tuple
 from pydantic import BaseModel
 
 import gym_sts.spaces.constants.cards as card_consts

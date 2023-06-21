@@ -4,7 +4,7 @@ import functools
 from typing import Union
 
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 from pydantic import BaseModel
 
 from gym_sts.spaces import actions

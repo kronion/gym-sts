@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Union
 
 import numpy as np
-from gym.spaces import MultiBinary
+from gymnasium.spaces import MultiBinary
 
 from gym_sts.spaces.constants.campfire import LOG_NUM_OPTIONS
 from gym_sts.spaces.observations import utils

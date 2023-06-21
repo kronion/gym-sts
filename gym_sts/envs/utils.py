@@ -2,8 +2,6 @@ import random
 import typing as tp
 from typing import Optional
 
-import numpy as np
-
 from gym_sts.spaces.observations import Observation
 
 
@@ -77,14 +75,7 @@ class Cache(tp.Generic[T]):
         self.cache = [None] * self.size
 
 
-def obs_value(obs: Observation) -> float:
-    """Useful for creating a reward function."""
-    value = float(obs.persistent_state.floor)
-    value += obs.persistent_state.hp / 100
-    return value
-
-
-def single_combat_value(obs: Observation) -> np.float64:
+def single_combat_value(obs: Observation) -> float:
     max_hp = sum(e.max_hp for e in obs.combat_state.enemies)
     enemy_hp = sum(e.current_hp for e in obs.combat_state.enemies)
 
@@ -92,7 +83,17 @@ def single_combat_value(obs: Observation) -> np.float64:
     self_max_hp = obs.persistent_state.max_hp
 
     if max_hp == 0:
-        enemy_hp = 1
+        enemy_hp = 0
         max_hp = 1
 
-    return np.mean([(max_hp - enemy_hp) / max_hp, self_hp / self_max_hp])
+    p_damage = (max_hp - enemy_hp) / max_hp
+    p_hp = self_hp / self_max_hp
+
+    return (p_hp + 0.01) * p_damage
+
+
+def full_game_obs_value(obs: Observation) -> float:
+    total = float(obs.persistent_state.floor)
+    if obs.in_combat:
+        total += single_combat_value(obs)
+    return total
