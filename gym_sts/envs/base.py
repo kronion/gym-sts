@@ -405,7 +405,12 @@ class SlayTheSpireGymEnv(gym.Env):
             print(prev_obs)
             print(action_id)
             now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-            self.screenshot(f"error_{now}.png")
+
+            try:
+                self.screenshot(f"error_{now}.png")
+            except NotImplementedError:
+                pass
+
             if not self.reboot_on_error:
                 raise e
 
