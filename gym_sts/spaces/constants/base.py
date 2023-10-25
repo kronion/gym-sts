@@ -26,6 +26,7 @@ class ScreenType(str, Enum):
     CARD_REWARD = "CARD_REWARD"
     CHEST = "CHEST"
     COMBAT_REWARD = "COMBAT_REWARD"
+    COMPLETE = "COMPLETE"  # The screen immediately after defeating the Act 3/4 boss?
     EVENT = "EVENT"
     FTUE = "FTUE"
     GAME_OVER = "GAME_OVER"
