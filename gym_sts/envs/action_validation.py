@@ -1,4 +1,5 @@
 from gym_sts.spaces import actions
+from gym_sts.spaces.constants.base import ScreenType
 from gym_sts.spaces.observations import Observation
 
 
@@ -7,6 +8,12 @@ def validate_end_turn(action: actions.EndTurn, observation: Observation) -> bool
 
 
 def validate_return(action: actions.Return, observation: Observation) -> bool:
+    # Once the agent proceeds to the map, we don't allow it to swap back
+    # to the previous screen. This prevents the agent from looping back and
+    # forth between the two screens for umpteen steps.
+    if observation.screen_type == ScreenType.MAP:
+        return False
+
     for word in ["cancel", "leave", "return", "skip"]:
         if word in observation._available_commands:
             return True
