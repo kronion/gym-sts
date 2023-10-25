@@ -1294,8 +1294,8 @@ class _CardCatalog:
                 has_target=True,
             ),
         ),
-        "Cloak and Dagger": CardMetadata(
-            id="Cloak and Dagger",
+        "Cloak And Dagger": CardMetadata(
+            id="Cloak And Dagger",
             name="Cloak and Dagger",
             card_type=CardType.SKILL,
             unupgraded=CardProperties(
