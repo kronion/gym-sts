@@ -9,14 +9,14 @@ license = "MIT"
 python = "^3.9, <3.11"  # Tensorflow requires <3.11
 docker = "^6"
 pydantic = "^1.9.2"
-ray = {extras = ["rllib"], version = "^2.4.0"}
+ray = "^2.7"
 fancyflags = "^1.1"
 absl-py = "^1.3.0"
 wandb = "^0.13.11"
 dm-tree = "^0.1.7"
 scikit-image = "^0.20.0"
 tensorflow = "^2.12.0"
-gymnasium = "^0.26.0"
+gymnasium = "^0.28.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.4.0"
