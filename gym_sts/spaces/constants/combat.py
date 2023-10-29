@@ -12,7 +12,7 @@ LOG_MAX_ATTACK = math.ceil(math.log(MAX_ATTACK, 2))
 LOG_MAX_ATTACK_TIMES = math.ceil(math.log(MAX_ATTACK_TIMES, 2))
 LOG_MAX_BLOCK = math.ceil(math.log(MAX_BLOCK, 2))
 LOG_MAX_EFFECT = math.ceil(math.log(MAX_EFFECT, 2))
-LOG_MAX_ENERGY = 4
+LOG_MAX_ENERGY = 6
 LOG_MAX_TURN = 8
 
 ALL_EFFECTS = [
