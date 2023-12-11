@@ -4,6 +4,7 @@ import logging
 import pathlib
 import random
 import shutil
+import string
 import subprocess
 import tempfile
 import time
@@ -63,12 +64,21 @@ class SlayTheSpireGymEnv(gym.Env):
         self.lib_dir = pathlib.Path(lib_dir).resolve()
         self.mods_dir = pathlib.Path(mods_dir).resolve()
 
+        self.headless = headless
+        self.container_name = None
+        if self.headless:
+            self.container_name = "sts-" + "".join(random.choices(string.ascii_lowercase, k=8))
+
         self._current_dir = pathlib.Path.cwd()
         self._temp_dir = None
         if output_dir is None:
             self._temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
             output_dir = self._temp_dir.name
         self.output_dir = pathlib.Path(output_dir).resolve()
+        if self.container_name:
+            self.output_dir = self.output_dir / self.container_name
+            self.output_dir.mkdir(exist_ok=True)
+
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
         self.logfile_path = self.output_dir / "stderr.log"
@@ -77,12 +87,11 @@ class SlayTheSpireGymEnv(gym.Env):
         self.screenshots_dir = pathlib.Path(CONTAINER_OUTDIR) / "screenshots"
         (self.output_dir / "screenshots").mkdir(exist_ok=True)
 
-        self.logfile = self.logfile_path.open("w")
+        self.logfile = self.logfile_path.open("wb")
 
         self.container: Optional[Container] = None
         self.process: Optional[subprocess.Popen] = None
 
-        self.headless = headless
         self.reboot_frequency = reboot_frequency
         self.reset_count = 0
         self.reboot_on_error = reboot_on_error
@@ -141,6 +150,7 @@ class SlayTheSpireGymEnv(gym.Env):
         with config_file.open(mode="w") as f:
             f.write(f"command={command}\n")
             f.write("runAtGameStart=true\n")
+            f.write("verbose=true\n")
 
     def _generate_superfastmode_config(self) -> None:
         """
@@ -172,6 +182,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.container = self.client.containers.run(
             image=constants.DOCKER_IMAGE_TAG,
+            name=self.container_name,
             remove=True,
             init=True,
             detach=True,
@@ -190,10 +201,7 @@ class SlayTheSpireGymEnv(gym.Env):
         # Create a sandbox directory where the subprocess will run
         tmp_dir = self._current_dir / "tmp"
 
-        try:
-            shutil.copytree(str(self.lib_dir), str(tmp_dir))
-        except FileExistsError:
-            pass
+        shutil.copytree(str(self.lib_dir), str(tmp_dir), dirs_exist_ok=True)
         shutil.copytree(str(self.mods_dir), str(tmp_dir / "mods"), dirs_exist_ok=True)
         preferences = constants.PROJECT_ROOT / "build" / "preferences"
         shutil.copytree(
@@ -312,6 +320,11 @@ class SlayTheSpireGymEnv(gym.Env):
         params = ResetParams(seed=seed, **options)
 
         print("env.reset, " + repr(params))
+        print(self.reset_count)
+        try:
+            print(self.container.name)
+        except Exception:
+            print("Uh oh")
 
         if params.reboot:
             self.reset_count = 0
@@ -400,10 +413,63 @@ class SlayTheSpireGymEnv(gym.Env):
 
         try:
             obs = self.communicator._manual_command(action.to_command())
+
+            if obs.has_error == is_valid:
+                # indicates a mismatch in our action validity checking
+                logging.error(
+                    "Action was %svalid, but obs %s an error.",
+                    "" if is_valid else "in",
+                    "had" if obs.has_error else "did not have",
+                )
+                logging.error(prev_obs.state)
+                logging.error(action_id)
+
+            had_error = obs.has_error
+            if had_error:
+                reward = -1.0
+                # Maybe check that the new obs is the same as the old one, modulo
+                # the error field?
+                obs = prev_obs
+            else:
+                # Send observation to state logger
+                if self.log_states:
+                    self.state_logger.log(action, obs)
+
+                success = False
+                for _ in range(10):
+                    if len(obs.valid_actions) == 0:
+                        # this can indicate instability
+                        time.sleep(1)
+                        obs = self.observe()
+                    else:
+                        success = True
+                        break
+                if not success:
+                    raise exceptions.StSError("No valid actions.")
+
+                reward = self.value_fn(obs) - self.value_fn(prev_obs)
+                self.observation_cache.append(obs)
+
+            info = {
+                "observation": obs,
+                "had_error": had_error,
+            }
+
+            return obs.serialize(), reward, obs.game_over, False, info
+
         except Exception as e:
             logging.error(e)
-            print(prev_obs)
+            print(prev_obs.state)
+            print(prev_obs.persistent_state.screen_type)
+            from gym_sts.spaces.constants.base import ScreenType
+            if prev_obs.persistent_state.screen_type == ScreenType.EVENT:
+                print(prev_obs.event_state.event_id)
             print(action_id)
+
+            if self.container is not None:
+                logs = self.container.logs()
+                self.logfile.write(logs)
+
             now = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
             try:
@@ -417,54 +483,14 @@ class SlayTheSpireGymEnv(gym.Env):
             # Reboot and return done=True to trigger a reset
             self.reboot()
             obs = prev_obs
+
             info = {
                 "observation": obs,
                 "had_error": obs.has_error,
                 "reboot_error": e,
             }
+
             return obs.serialize(), 0.0, True, False, info
-
-        if obs.has_error == is_valid:
-            # indicates a mismatch in our action validity checking
-            logging.error(
-                "Action was %svalid, but obs %s an error.",
-                "" if is_valid else "not ",
-                "had" if obs.has_error else "did not have",
-            )
-
-        had_error = obs.has_error
-        if had_error:
-            reward = -1.0
-            # Maybe check that the new obs is the same as the old one, modulo
-            # the error field?
-            obs = prev_obs
-        else:
-            # Send observation to state logger
-            if self.log_states:
-                self.state_logger.log(action, obs)
-
-            success = False
-            for _ in range(10):
-                if len(obs.valid_actions) == 0:
-                    # this can indicate instability
-                    time.sleep(1)
-                    obs = self.observe()
-                else:
-                    success = True
-                    break
-            if not success:
-                print(obs.state)
-                raise exceptions.StSError("No valid actions.")
-
-            reward = self.value_fn(obs) - self.value_fn(prev_obs)
-            self.observation_cache.append(obs)
-
-        info = {
-            "observation": obs,
-            "had_error": had_error,
-        }
-
-        return obs.serialize(), reward, obs.game_over, False, info
 
     def screenshot(self, filename: str) -> None:
         """
@@ -477,6 +503,7 @@ class SlayTheSpireGymEnv(gym.Env):
         prev_setting = self.animate
         if not self.animate:
             self.set_animate(True)
+        time.sleep(1)
 
         file_path = self.screenshots_dir / filename
         exit_code, output = self.container.exec_run(
@@ -497,9 +524,18 @@ class SlayTheSpireGymEnv(gym.Env):
         Terminate the current game process.
         """
 
-        if self.container is not None:
-            self.container.stop()
-            self.container = None
+        if self.headless:
+            try:
+                print(self.container.name)
+            except Exception:
+                print("No container name")
+            if self.container is not None:
+                self.container.rename(self.container.name + "-stopping")
+                self.container.stop()
+                self.container.wait()
+                self.container = None
+            else:
+                print("No container to stop??")
 
         if self.process is not None:
             self.process.terminate()
