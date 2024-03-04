@@ -30,6 +30,9 @@ CONTAINER_LIBDIR = "/game/lib"
 CONTAINER_MODSDIR = "/game/mods"
 
 
+logger = logging.getLogger(__name__)
+
+
 class SlayTheSpireGymEnv(gym.Env):
     def __init__(
         self,
@@ -43,6 +46,7 @@ class SlayTheSpireGymEnv(gym.Env):
         value_fn: Callable[[Observation], float] = full_game_obs_value,
         ascension: int = 0,
         log_states: bool = False,
+        verbose: bool = True,
     ):
         """
         Gym env to interact with the Slay the Spire video game.
@@ -59,6 +63,7 @@ class SlayTheSpireGymEnv(gym.Env):
                 frozen in place, but saving CPU.
             reboot_frequency: Reboot the game every n resets. This stops memory leaks.
             reboot_on_error: Reboot the game if an error (e.g. timeout) occurs.
+            verbose: Controls the verbosity of CommunicationMod.
         """
 
         self.lib_dir = pathlib.Path(lib_dir).resolve()
@@ -67,7 +72,9 @@ class SlayTheSpireGymEnv(gym.Env):
         self.headless = headless
         self.container_name = None
         if self.headless:
-            self.container_name = "sts-" + "".join(random.choices(string.ascii_lowercase, k=8))
+            self.container_name = "sts-" + "".join(
+                random.choices(string.ascii_lowercase, k=8)
+            )
 
         self._current_dir = pathlib.Path.cwd()
         self._temp_dir = None
@@ -95,6 +102,8 @@ class SlayTheSpireGymEnv(gym.Env):
         self.reboot_frequency = reboot_frequency
         self.reset_count = 0
         self.reboot_on_error = reboot_on_error
+
+        self.verbose = verbose
 
         # Animation can be toggled at any time using set_animate()
         self.animate = animate
@@ -127,30 +136,38 @@ class SlayTheSpireGymEnv(gym.Env):
 
         atexit.register(self.close)
 
-    @classmethod
-    def build_image(cls) -> None:
+    def build_image(self) -> None:
+        self._generate_communication_mod_config(headless=True)
+
         client = docker.from_env()
         client.images.build(
             path=str(constants.PROJECT_ROOT / "build"), tag=constants.DOCKER_IMAGE_TAG
         )
 
-    def _generate_communication_mod_config(self) -> None:
+    def _generate_communication_mod_config(self, headless: bool) -> None:
         """
         Create the config file CommunicationMod uses to start a subprocess.
 
         WARNING: This function will silently overwrite any existing config file.
         """
 
-        pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
-        command = f"{pipe_script} {self.input_path} {self.output_path}"
-        config_file = pathlib.Path(
-            "~/.config/ModTheSpire/CommunicationMod/config.properties"
-        ).expanduser()
+        if headless:
+            command = "/game/pipe_to_host.sh"
+            config_file = pathlib.Path(
+                constants.PROJECT_ROOT / "build" / "communication_mod.config.properties"
+            ).resolve()
+        else:
+            pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
+            config_file = pathlib.Path(
+                "~/.config/ModTheSpire/CommunicationMod/config.properties"
+            ).expanduser()
+            command = f"{pipe_script} {self.input_path} {self.output_path}"
 
         with config_file.open(mode="w") as f:
             f.write(f"command={command}\n")
             f.write("runAtGameStart=true\n")
-            f.write("verbose=true\n")
+            if self.verbose:
+                f.write("verbose=true\n")
 
     def _generate_superfastmode_config(self) -> None:
         """
@@ -170,7 +187,7 @@ class SlayTheSpireGymEnv(gym.Env):
             )
 
     def _run_container(self) -> None:
-        print("Starting STS in Docker container")
+        logger.info("Starting STS in Docker container")
         self.client = docker.from_env()
         try:
             self.client.images.get(constants.DOCKER_IMAGE_TAG)
@@ -192,11 +209,11 @@ class SlayTheSpireGymEnv(gym.Env):
                 self.mods_dir: dict(bind=CONTAINER_MODSDIR, mode="ro"),
             },
         )
-        print(f"started docker container {self.container.name}")
-        print(f"To view logs, run `docker logs {self.container.name}`.")
+        logger.info(f"Started docker container {self.container.name}")
+        logger.info(f"To view logs, run `docker logs {self.container.name}`.")
 
     def _run_locally(self) -> None:
-        print("Starting STS on the host machine")
+        logger.info("Starting STS on the host machine")
 
         # Create a sandbox directory where the subprocess will run
         tmp_dir = self._current_dir / "tmp"
@@ -211,7 +228,7 @@ class SlayTheSpireGymEnv(gym.Env):
         displayconfig_path = constants.PROJECT_ROOT / "build" / "info.displayconfig"
         shutil.copy(str(displayconfig_path), str(tmp_dir / "info.displayconfig"))
 
-        self._generate_communication_mod_config()
+        self._generate_communication_mod_config(headless=False)
         self._generate_superfastmode_config()
 
         self.process = subprocess.Popen(
@@ -280,14 +297,14 @@ class SlayTheSpireGymEnv(gym.Env):
         return obs
 
     def _ready(self):
-        print("Signalling READY")
+        logger.debug("Signalling READY")
         self.start_message = self.communicator.ready()
 
     def reboot(self) -> None:
         """
         Close and reopen the game process. Also works for the initial boot.
         """
-        print("env.reboot()")
+        logger.debug("Rebooting")
         self.stop()
         self.start()
 
@@ -319,19 +336,18 @@ class SlayTheSpireGymEnv(gym.Env):
         options = options or {}
         params = ResetParams(seed=seed, **options)
 
-        print("env.reset, " + repr(params))
-        print(self.reset_count)
-        try:
-            print(self.container.name)
-        except Exception:
-            print("Uh oh")
-
         if params.reboot:
             self.reset_count = 0
         if self.reset_count == 0:
             self.reboot()
         else:
             self._end_game()
+
+        run_type = "local"
+        if self.container is not None:
+            run_type = f"container {self.container.name}"
+
+        logger.debug(f"Reset {run_type} reset_count={self.reset_count} {repr(params)}")
 
         self.reset_count += 1
         if self.reset_count == self.reboot_frequency:
@@ -397,9 +413,9 @@ class SlayTheSpireGymEnv(gym.Env):
         else:
             self._run_locally()
 
-        print("Opening pipe files...")
+        logger.debug("Opening pipe files...")
         self.communicator = Communicator(self.input_path, self.output_path)
-        print("Opened pipe files.")
+        logger.debug("Opened pipe files.")
 
         self._ready()
         self.communicator.render(self.animate)
@@ -416,13 +432,13 @@ class SlayTheSpireGymEnv(gym.Env):
 
             if obs.has_error == is_valid:
                 # indicates a mismatch in our action validity checking
-                logging.error(
+                logger.error(
                     "Action was %svalid, but obs %s an error.",
                     "" if is_valid else "in",
                     "had" if obs.has_error else "did not have",
                 )
-                logging.error(prev_obs.state)
-                logging.error(action_id)
+                logger.error(prev_obs.state)
+                logger.error(action_id)
 
             had_error = obs.has_error
             if had_error:
@@ -458,13 +474,14 @@ class SlayTheSpireGymEnv(gym.Env):
             return obs.serialize(), reward, obs.game_over, False, info
 
         except Exception as e:
-            logging.error(e)
-            print(prev_obs.state)
-            print(prev_obs.persistent_state.screen_type)
+            logger.error(e)
+            logger.debug(prev_obs.state)
+            logger.debug(prev_obs.persistent_state.screen_type)
             from gym_sts.spaces.constants.base import ScreenType
+
             if prev_obs.persistent_state.screen_type == ScreenType.EVENT:
-                print(prev_obs.event_state.event_id)
-            print(action_id)
+                logger.debug(f"Event {prev_obs.event_state.event_id}")
+            logger.debug(f"Action {action_id} ({action})")
 
             if self.container is not None:
                 logs = self.container.logs()
@@ -525,17 +542,14 @@ class SlayTheSpireGymEnv(gym.Env):
         """
 
         if self.headless:
-            try:
-                print(self.container.name)
-            except Exception:
-                print("No container name")
             if self.container is not None:
-                self.container.rename(self.container.name + "-stopping")
+                logger.debug(f"Stopping container {self.container.name}")
+                self.container.rename(f"{self.container.name}-stopping")
                 self.container.stop()
                 self.container.wait()
                 self.container = None
             else:
-                print("No container to stop??")
+                logger.debug("No container to stop")
 
         if self.process is not None:
             self.process.terminate()
