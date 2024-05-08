@@ -75,6 +75,10 @@ class Communicator:
         tries = 3
         for _ in range(tries):
             state = self.receiver.receive_game_state()
+            print(state.keys())
+            if "error" in state:
+                print(state["error"])
+                breakpoint()
             if state["in_game"]:
                 return Observation(state)
 

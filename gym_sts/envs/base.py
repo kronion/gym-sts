@@ -8,7 +8,7 @@ import string
 import subprocess
 import tempfile
 import time
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple
 
 import docker
 import gymnasium as gym
@@ -77,14 +77,19 @@ class SlayTheSpireGymEnv(gym.Env):
             )
 
         self._current_dir = pathlib.Path.cwd()
-        self._temp_dir = None
+        self._output_temp_dir = None
         if output_dir is None:
-            self._temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
-            output_dir = self._temp_dir.name
+            self._output_temp_dir = tempfile.TemporaryDirectory(prefix="sts-")
+            output_dir = self._output_temp_dir.name
         self.output_dir = pathlib.Path(output_dir).resolve()
         if self.container_name:
             self.output_dir = self.output_dir / self.container_name
             self.output_dir.mkdir(exist_ok=True)
+
+        self._gamefile_temp_dir = tempfile.TemporaryDirectory(
+            prefix="sts-", suffix="-gamefiles"
+        )
+        self.gamefile_dir = pathlib.Path(self._gamefile_temp_dir.name).resolve()
 
         self.input_path = self.output_dir / "stsai_input"
         self.output_path = self.output_dir / "stsai_output"
@@ -136,15 +141,24 @@ class SlayTheSpireGymEnv(gym.Env):
 
         atexit.register(self.close)
 
-    def build_image(self) -> None:
-        self._generate_communication_mod_config(headless=True)
+    @classmethod
+    def build_image(cls, verbose: bool = True) -> None:
+        cls._generate_communication_mod_config(headless=True, verbose=verbose)
 
         client = docker.from_env()
         client.images.build(
             path=str(constants.PROJECT_ROOT / "build"), tag=constants.DOCKER_IMAGE_TAG
         )
 
-    def _generate_communication_mod_config(self, headless: bool) -> None:
+    @classmethod
+    def _generate_communication_mod_config(
+        cls,
+        headless: bool,
+        input_path: pathlib.Path | None = None,
+        output_path: pathlib.Path | None = None,
+        home_path: pathlib.Path | None = None,
+        verbose: bool = True,
+    ) -> None:
         """
         Create the config file CommunicationMod uses to start a subprocess.
 
@@ -157,28 +171,52 @@ class SlayTheSpireGymEnv(gym.Env):
                 constants.PROJECT_ROOT / "build" / "communication_mod.config.properties"
             ).resolve()
         else:
-            pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
-            config_file = pathlib.Path(
-                "~/.config/ModTheSpire/CommunicationMod/config.properties"
-            ).expanduser()
-            command = f"{pipe_script} {self.input_path} {self.output_path}"
+            if input_path is None:
+                raise Exception("input_path is required when not headless")
+            if output_path is None:
+                raise Exception("output_path is required when not headless")
+
+            if home_path is None:
+                home_path = pathlib.Path.home()
+
+            pipe_script = (
+                constants.PROJECT_ROOT / "build" / "pipe_locally.sh"
+            ).resolve()
+            command = f"{pipe_script} {input_path} {output_path}"
+
+            config_file = (
+                home_path
+                / ".config"
+                / "ModTheSpire"
+                / "CommunicationMod"
+                / "config.properties"
+            )
+            config_file.parent.mkdir(parents=True, exist_ok=True)
 
         with config_file.open(mode="w") as f:
             f.write(f"command={command}\n")
             f.write("runAtGameStart=true\n")
-            if self.verbose:
+            if verbose:
                 f.write("verbose=true\n")
 
-    def _generate_superfastmode_config(self) -> None:
+    def _generate_superfastmode_config(self, home_path: pathlib.Path | None = None) -> None:
         """
         Create the config file for SuperFastMode.
 
         WARNING: This function will silently overwrite any existing config file.
         """
 
-        config_file = pathlib.Path(
-            "~/.config/ModTheSpire/SuperFastMode/SuperFastModeConfig.properties"
-        ).expanduser()
+        if home_path is None:
+            home_path = pathlib.Path.home()
+
+        config_file = (
+            home_path
+            / ".config"
+            / "ModTheSpire"
+            / "SuperFastMode"
+            / "SuperFastModeConfig.properties"
+        )
+        config_file.parent.mkdir(parents=True, exist_ok=True)
 
         with config_file.open(mode="w") as f:
             f.write(
@@ -216,7 +254,7 @@ class SlayTheSpireGymEnv(gym.Env):
         logger.info("Starting STS on the host machine")
 
         # Create a sandbox directory where the subprocess will run
-        tmp_dir = self._current_dir / "tmp"
+        tmp_dir = self.gamefile_dir
 
         shutil.copytree(str(self.lib_dir), str(tmp_dir), dirs_exist_ok=True)
         shutil.copytree(str(self.mods_dir), str(tmp_dir / "mods"), dirs_exist_ok=True)
@@ -228,11 +266,17 @@ class SlayTheSpireGymEnv(gym.Env):
         displayconfig_path = constants.PROJECT_ROOT / "build" / "info.displayconfig"
         shutil.copy(str(displayconfig_path), str(tmp_dir / "info.displayconfig"))
 
-        self._generate_communication_mod_config(headless=False)
-        self._generate_superfastmode_config()
+        self._generate_communication_mod_config(
+            headless=False,
+            input_path=self.input_path,
+            output_path=self.output_path,
+            home_path=tmp_dir,
+            verbose=self.verbose,
+        )
+        self._generate_superfastmode_config(home_path=tmp_dir)
 
         self.process = subprocess.Popen(
-            [constants.JAVA_INSTALL, "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
+            [constants.JAVA_INSTALL, f"-Duser.home={tmp_dir}", "-jar", constants.MTS_JAR] + constants.EXTRA_ARGS,
             stdout=self.logfile,
             stderr=self.logfile,
             cwd=tmp_dir,
@@ -279,7 +323,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         stable = False
 
-        for i in range(100):
+        for _ in range(100):
             obs = self.communicator.state()
 
             if obs.stable:
@@ -313,14 +357,12 @@ class SlayTheSpireGymEnv(gym.Env):
         *,
         seed: Optional[int] = None,
         options: Optional[dict] = None,
-    ) -> Union[dict, Tuple[dict, dict]]:
+    ) -> Tuple[dict, dict]:
         """
         Args:
             seed: An int used to initialize the env's PRNG. The PRNG is used to
                 generate new game seeds on subsequent resets, so you should only need
                 to provide this kwarg once.
-            return_info: Whether or not to return a dict of miscellaneous context, for
-                parity with step()'s return signature.
             options: A dict of additional optional parameters, listed below:
                 sts_seed (str): A specific seed for the game to use, in the same format
                     as you'd provide in the game's menu. Useful for (re)playing known
@@ -573,6 +615,10 @@ class SlayTheSpireGymEnv(gym.Env):
 
         self.stop()
 
-        if self._temp_dir is not None:
-            self._temp_dir.cleanup()
-            self._temp_dir = None
+        # if self._output_temp_dir is not None:
+        #     self._output_temp_dir.cleanup()
+        #     self._output_temp_dir = None
+        #
+        # if self._gamefile_temp_dir is not None:
+        #     self._gamefile_temp_dir.cleanup()
+        #     self._gamefile_temp_dir = None
