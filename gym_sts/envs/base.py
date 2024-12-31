@@ -46,6 +46,7 @@ class SlayTheSpireGymEnv(gym.Env):
         value_fn: Callable[[Observation], float] = full_game_obs_value,
         ascension: int = 0,
         log_states: bool = False,
+        logged_state_indent: int | None = None,
         verbose: bool = True,
     ):
         """
@@ -132,7 +133,9 @@ class SlayTheSpireGymEnv(gym.Env):
         self.log_states = log_states
         self.states_dir = self.output_dir / "states"
         self.states_dir.mkdir(exist_ok=True)
-        self.state_logger: StateLogger = StateLogger(self.states_dir)
+        self.state_logger: StateLogger = StateLogger(
+            self.states_dir, indent=logged_state_indent
+        )
 
         atexit.register(self.close)
 
@@ -157,7 +160,9 @@ class SlayTheSpireGymEnv(gym.Env):
                 constants.PROJECT_ROOT / "build" / "communication_mod.config.properties"
             ).resolve()
         else:
-            pipe_script = (constants.PROJECT_ROOT / "build" / "pipe_locally.sh").resolve()
+            pipe_script = (
+                constants.PROJECT_ROOT / "build" / "pipe_locally.sh"
+            ).resolve()
             config_file = pathlib.Path(
                 "~/.config/ModTheSpire/CommunicationMod/config.properties"
             ).expanduser()
@@ -397,7 +402,7 @@ class SlayTheSpireGymEnv(gym.Env):
 
         # Send game's starting state to state logger
         if self.log_states:
-            self.state_logger.log(None, obs)
+            self.state_logger.log(None, None, obs)
 
         info = {
             "seed": self.seed,
@@ -447,10 +452,6 @@ class SlayTheSpireGymEnv(gym.Env):
                 # the error field?
                 obs = prev_obs
             else:
-                # Send observation to state logger
-                if self.log_states:
-                    self.state_logger.log(action, obs)
-
                 success = False
                 for _ in range(10):
                     if len(obs.valid_actions) == 0:
@@ -464,6 +465,11 @@ class SlayTheSpireGymEnv(gym.Env):
                     raise exceptions.StSError("No valid actions.")
 
                 reward = self.value_fn(obs) - self.value_fn(prev_obs)
+
+                # Send observation to state logger
+                if self.log_states:
+                    self.state_logger.log(action, reward, obs)
+
                 self.observation_cache.append(obs)
 
             info = {
